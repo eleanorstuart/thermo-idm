@@ -230,7 +230,7 @@ class Cluster:
 
         plt.xticks(**kwargs)
         plt.yticks(**kwargs)
-        plt.ylim([10 ** (np.log10(np.nanmin(sigma0.value)) - 2), 1.0e-26])
+        plt.ylim([10 ** (np.log10(np.nanmin(sigma0.value)) - 2), 10 ** (np.log10(np.nanmax(sigma0.value)))])
 
         plt.xlabel(r"$m_{\chi} \mathrm{(GeV)}$", **kwargs)
         plt.ylabel(r"$\sigma_0 (\mathrm{cm}^2)$", **kwargs)

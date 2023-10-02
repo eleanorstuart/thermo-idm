@@ -28,11 +28,9 @@ def log_likelihood_1(p0, T_data, var, clusters, m_chi):
 def log_likelihood(p0, T_data, var, clusters):
     #if p0[0]<0 or p0[1]<0:
     #   return -np.inf
-    if p0[0]>0:
+    if p0[0]>0 or p0[0]<-30:
         return -np.inf
-    if p0[1]<-10:
-        return -np.inf
-    if 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+    if p0[1]<-10 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
         return -np.inf
 
     print(p0)

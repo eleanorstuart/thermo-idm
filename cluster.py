@@ -36,7 +36,7 @@ def fun(T_b, cluster, p0, f_chi=1, n=0):
     m_chi = 10 ** p0[1] * u.GeV
 
     norm = cluster.norm
-    bh_mass = cluster.bh_mass()
+    bh_mass = cluster.bh_mass
     mu = cluster.mu
     m_b = cluster.m_b
     nb = (2 * cluster.n_e).to(u.m ** (-3))

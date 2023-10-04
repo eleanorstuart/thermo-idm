@@ -208,14 +208,14 @@ class Cluster:
         plt.legend(loc="upper left")
 
     def plot_sigma0_vs_m_chi(
-        self, f_chi=[1], m_psi=[0.1 * u.GeV], n=[0], region=False, save=False, **kwargs
+        self, f_chi=[1], m_psi=[0.1 * u.GeV], n=[0], Qh_dot: callable = None, region=False, save=False, **kwargs
     ):
         # plots sigma0 vs m_chi for all combinations of f_chi, m_psi, and n
         paper_plot()
         fig = plt.figure()
         params = [(f, m, i) for f in f_chi for m in m_psi for i in n]
         for f, m, i in params:
-            sigma0 = self.sigma0(f_chi=f, m_psi=m, n=i)
+            sigma0 = self.sigma0(f_chi=f, m_psi=m, n=i, Qh_dot=Qh_dot)
             label = f"$f_{{\chi}}={f}$, $n={i}$"
             label = label + f", $m_{{\psi}}={m}$" if f < 1 else label
             plt.loglog(self.m_chi[: sigma0.shape[0]], sigma0, label=label)
@@ -229,7 +229,7 @@ class Cluster:
 
         plt.xticks(**kwargs)
         plt.yticks(**kwargs)
-        plt.ylim([10 ** (np.log10(np.nanmin(sigma0.value)) - 2), 10 ** (np.log10(np.nanmax(sigma0.value)))])
+        plt.ylim([10 ** (np.log10(np.nanmin(sigma0.value)) - 2 ), 10 ** (np.log10(np.nanmax(sigma0.value)))])
 
         plt.xlabel(r"$m_{\chi} \mathrm{(GeV)}$", **kwargs)
         plt.ylabel(r"$\sigma_0 (\mathrm{cm}^2)$", **kwargs)

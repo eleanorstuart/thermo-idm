@@ -137,21 +137,15 @@ class Cluster:
             const.k_B * self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / n ** (self.adiabatic_idx - 1)
 
-    def cooling_time(self):
-        # THIS IS NOT A VALID WAY OF CALCULATING COOLING TIME
-        t_c = (
-            3
-            * const.k_B
-            * self.n_e
-            * self.volume
-            * self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
-        ) / (2 * (self.luminosity()).to(u.J / u.s))
-        return t_c.to(u.s)
 
-    def radiative_cooling_rate(self):
-        with u.set_enabled_equivalencies(u.mass_energy()):
-            # return (3 / 2 * self.n_e * self.baryon_temp / self.cooling_time() * self.volume).to(u.GeV / u.s)
-            return 0  # NO RADIATIVE COOlING RIGHT NOW UNTIL I FIND A BETTER WAY TO CALCULATE
+    def radiative_cooling_rate(self): # from GFE B1.3.5
+        prefactors=6.8*1e-42 *u.erg*u.cm**3
+        Z=1
+        T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
+        T8=T/(1e8*u.K)
+        C=(prefactors*Z**2*(self.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+        Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3)) # B1.63 integrated over all frequencies
+        return (self.volume*Eff_int).to(u.erg/u.s)
 
     def luminosity(self):  # from Gaspari 2019 figure A1
         T = temp_from_vdisp(self.v500).to(u.K, equivalencies=u.temperature_energy())
@@ -167,8 +161,13 @@ class Cluster:
             u.GeV
         )
 
-    def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0):
+    def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0, Qh_dot: callable = None):
         # m_chis = self.m_chi
+        if Qh_dot:
+            total_heating_rate=Qh_dot()
+        else:
+            total_heating_rate=self.radiative_cooling_rate()
+
 
         # dm_temp = self.virial_temperature(self.m_chi, f_chi=f_chi, m_psi=m_psi)
         valid_m_chis = self.m_chi[
@@ -181,7 +180,7 @@ class Cluster:
         dm_temp = self.virial_temperature(valid_m_chis, f_chi=f_chi, m_psi=m_psi)
         uth = np.sqrt(self.baryon_temp / self.m_b + dm_temp / valid_m_chis)
         rho_chi = self.rho_dm * f_chi
-        total_heating_rate = self.agn_heating_rate() - self.radiative_cooling_rate()
+        #total_heating_rate = Qh_dot() #self.agn_heating_rate() - self.radiative_cooling_rate()
         numerator = total_heating_rate * (valid_m_chis + self.m_b) ** 2
         denominator = (
             3

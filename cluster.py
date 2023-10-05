@@ -41,8 +41,6 @@ def fun(T_b, cluster, p0, f_chi=1, n=0):
     m_b = cluster.m_b
     nb = (2 * cluster.n_e).to(u.m ** (-3))
     gamma = cluster.adiabatic_idx
-    rho_chi = cluster.rho_dm * f_chi
-    rho_b = cluster.rho_b
     V = cluster.volume
     efficiency = cluster.epsilon
     T_chi = cluster.virial_temperature(m_chi)
@@ -51,7 +49,7 @@ def fun(T_b, cluster, p0, f_chi=1, n=0):
     plasma_entropy_factors = ((mu * m_b) ** (5 / 2) * nb) / gamma ** (
         3 / 2
     )  # no k_b because T_b in GeV
-    cooling_factors = 3 * rho_chi * rho_b * V * c(n) * const.c
+    cooling_factors = cluster.cooling_factors(n=n, f_chi=f_chi)
 
     B = (efficiency * accretion_factors * plasma_entropy_factors) / (cooling_factors)
 
@@ -195,6 +193,8 @@ class Cluster:
         sigma0 = (numerator / denominator).to(u.cm**2)
         return sigma0
 
+    # Plotting functions
+
     def plot_T_chi_vs_m_chi(
         self, f_chi=1, m_psi=0.1 * u.GeV
     ):  # produces T_chi vs m_chi plot given an f_chi and m_psi
@@ -237,7 +237,12 @@ class Cluster:
         if save:
             savefig(fig, "plots/sigma0_mchi.pdf")
 
-    # model testing methods:
+
+    # model testing methods - Predicted value functions for MCMC
+    def cooling_factors(self, n=0, f_chi=1):
+        rho_chi=self.rho_dm*f_chi
+        return 3 * rho_chi * self.rho_b * self.volume * c(n) * const.c
+
     def pred_T_b_small_m(self, p0, m_chi, n=0):
         # approximates T_b for small m_chi -> T_chi~0
         sigma0 = 10**p0 * u.cm**2
@@ -286,3 +291,18 @@ class Cluster:
         p0 = [p0[0], m_chi]
         solution = root(fun, x0, args=(self, p0)).x
         return solution[0] * u.GeV
+
+    def pred_pref(self, p0):
+        # predicts the radiation prefactors given vector p0=[log(sigma0), log(m_chi)]
+        with u.set_enabled_equivalencies(u.temperature_energy()):
+            sigma0 = 10 ** p0[0] * u.cm**2
+            m_chi = 10 ** p0[1] * u.GeV
+            T_chi = self.virial_temperature(m_chi)
+            T_b = self.baryon_temp.to(u.K)
+            Z=1
+
+            u_th = (T_chi/m_chi + self.baryon_temp/self.m_b)**(1/2)
+            dm_cooling_rate = (self.cooling_factors() * (T_chi-self.baryon_temp) * sigma0*u_th/(m_chi+self.m_b)**2).to(u.erg/u.s)
+            rad_factors = ((const.h)/(Z**2 * const.k_B * T_b * self.volume)).to(u.s/u.cm**3)
+            return rad_factors
+        #(self.cooling_factors()*(T_chi-self.baryon_temp)*sigma0*u_th/(m_chi+self.m_b)**2 * (const.h/(Z**2 * const.k_B * self.baryon_temp*self.volume))).to(u.cm**3 * u.erg)

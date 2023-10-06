@@ -2,65 +2,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy import constants as const
-from scipy.special import gamma
 from scipy.optimize import root
-from plotting import savefig, paper_plot
 from dataclasses import dataclass
 
+from plotting import savefig, paper_plot
+from cluster_functions import * 
+
+
 u.set_enabled_equivalencies(u.mass_energy())
-
-
-def c(n):
-    return 2 ** (5 + n / 2) / (3 * np.sqrt(np.pi)) * gamma(3 + n / 2)
-
-
-def temp_from_vdisp(vel_disp):
-    return (vel_disp**2 * const.m_p / const.k_B).to(
-        u.GeV, equivalencies=u.temperature_energy()
-    )
-
-
-def temp_from_luminosity(luminosity):
-    lum = luminosity.to(u.erg / u.s)
-    log_T = (np.log10(lum.value) - 45.06) / 2.88 + np.log10(6)
-    T = np.power(10, log_T) * u.keV
-    return T.to(u.GeV)
-
-
-def fun(T_b, cluster, p0, f_chi=1, n=0):
-    T_b = T_b * u.GeV
-
-    # sigma0=np.float_power(10, p0[0].astype(dtype=np.float128))*u.cm**2
-    sigma0 = 10 ** p0[0] * u.cm**2
-    # m_chi = np.float_power(10, p0[1].astype(dtype=np.float128))*u.GeV
-    m_chi = 10 ** p0[1] * u.GeV
-
-    norm = cluster.norm
-    bh_mass = cluster.bh_mass
-    mu = cluster.mu
-    m_b = cluster.m_b
-    nb = (2 * cluster.n_e).to(u.m ** (-3))
-    gamma = cluster.adiabatic_idx
-    V = cluster.volume
-    efficiency = cluster.epsilon
-    T_chi = cluster.virial_temperature(m_chi)
-
-    accretion_factors = norm * 4 * np.pi * (const.G * bh_mass) ** 2
-    plasma_entropy_factors = ((mu * m_b) ** (5 / 2) * nb) / gamma ** (
-        3 / 2
-    )  # no k_b because T_b in GeV
-    cooling_factors = cluster.cooling_factors(n=n, f_chi=f_chi)
-
-    B = (efficiency * accretion_factors * plasma_entropy_factors) / (cooling_factors)
-
-    other_c = ((B * (m_chi + m_b) ** 2) / (sigma0) * (1 / const.c**3)).to(
-        u.GeV ** (5 / 2)
-    )
-    return (T_b - T_chi) * (T_chi / m_chi + T_b / m_b) ** (1 / 2) * T_b ** (
-        3 / 2
-    ) - other_c
-
-
 with u.set_enabled_equivalencies(u.mass_energy()):
     adiabatic_idx = 5 / 3
     norm = (
@@ -124,28 +73,28 @@ class Cluster:
             frac = (self.mu * self.m_b) ** (5 / 2) / self.adiabatic_idx ** (3 / 2)
             return leading_factors * gm2 * frac * self.plasma_entropy() ** (-3 / 2)
 
-    def get_bh_mass(self):  # from Gaspari 2019 figure 8
+    def get_bh_mass(self):
         slope = 1.39
         intercept = -9.56 * u.Msun
         return (slope * self.m500 + intercept).to(u.kg)
 
     def plasma_entropy(self):
-        n = (2 * self.n_e).to(u.m ** (-3))  # baryon number density
+        baryon_number_density = (2 * self.n_e).to(u.m ** (-3))
         return (
             const.k_B * self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
-        ).to(u.GeV) / n ** (self.adiabatic_idx - 1)
+        ).to(u.GeV) / baryon_number_density ** (self.adiabatic_idx - 1)
 
 
-    def radiative_cooling_rate(self): # from GFE B1.3.5
+    def radiative_cooling_rate(self):
         prefactors=6.8*1e-42 *u.erg*u.cm**3
         Z=1
         T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
         T8=T/(1e8*u.K)
         C=(prefactors*Z**2*(self.n_e.to(u.cm**-3))**2)/(T8**(1/2))
-        Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3)) # B1.63 integrated over all frequencies
+        Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
         return (self.volume*Eff_int).to(u.erg/u.s)
 
-    def luminosity(self):  # from Gaspari 2019 figure A1
+    def luminosity(self):
         T = temp_from_vdisp(self.v500).to(u.K, equivalencies=u.temperature_energy())
         b = -2.34 * 1e44 * u.erg / u.s
         m = (4.71 * 1e44 * u.erg / u.s) / u.K
@@ -160,14 +109,8 @@ class Cluster:
         )
 
     def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0, Qh_dot: callable = None):
-        # m_chis = self.m_chi
-        if Qh_dot:
-            total_heating_rate=Qh_dot()
-        else:
-            total_heating_rate=self.radiative_cooling_rate()
+        total_heating_rate = Qh_dot() if Qh_dot else self.radiative_cooling_rate()
 
-
-        # dm_temp = self.virial_temperature(self.m_chi, f_chi=f_chi, m_psi=m_psi)
         valid_m_chis = self.m_chi[
             np.where(
                 self.virial_temperature(self.m_chi, f_chi=f_chi, m_psi=m_psi)
@@ -178,7 +121,7 @@ class Cluster:
         dm_temp = self.virial_temperature(valid_m_chis, f_chi=f_chi, m_psi=m_psi)
         uth = np.sqrt(self.baryon_temp / self.m_b + dm_temp / valid_m_chis)
         rho_chi = self.rho_dm * f_chi
-        #total_heating_rate = Qh_dot() #self.agn_heating_rate() - self.radiative_cooling_rate()
+
         numerator = total_heating_rate * (valid_m_chis + self.m_b) ** 2
         denominator = (
             3
@@ -190,8 +133,7 @@ class Cluster:
             * uth ** (n + 1)
             * const.c.to(u.cm / u.s)
         )
-        sigma0 = (numerator / denominator).to(u.cm**2)
-        return sigma0
+        return (numerator / denominator).to(u.cm**2)
 
     # Plotting functions
 
@@ -207,17 +149,21 @@ class Cluster:
         plt.ylabel(r"$T_{\chi} (GeV)$")
         plt.legend(loc="upper left")
 
-    def plot_sigma0_vs_m_chi(
-        self, f_chi=[1], m_psi=[0.1 * u.GeV], n=[0], Qh_dot: callable = None, region=False, save=False, **kwargs
-    ):
+    def plot_sigma0_vs_m_chi(self, f_chi=None, m_psi=None, n=None, Qh_dot: callable = None, region=False, save=False, **kwargs):
+        if f_chi is None:
+            f_chi = [1]
+        if m_psi is None:
+            m_psi = [0.1 * u.GeV]
+        if n is None:
+            n = [0]
         # plots sigma0 vs m_chi for all combinations of f_chi, m_psi, and n
         paper_plot()
         fig = plt.figure()
         params = [(f, m, i) for f in f_chi for m in m_psi for i in n]
         for f, m, i in params:
             sigma0 = self.sigma0(f_chi=f, m_psi=m, n=i, Qh_dot=Qh_dot)
-            label = f"$f_{{\chi}}={f}$, $n={i}$"
-            label = label + f", $m_{{\psi}}={m}$" if f < 1 else label
+            label = f"$f_{{\chi}}={f}$, $n={i}$" 
+            label = f"{label}, $m_{{\psi}}={m}$" if f < 1 else label
             plt.loglog(self.m_chi[: sigma0.shape[0]], sigma0, label=label)
             if region:
                 plt.fill_between(
@@ -271,11 +217,10 @@ class Cluster:
             * gm2
             * frac
             * (1 / nb ** (2 / 3)) ** (-3 / 2)
-        )  # removed k_B from original function because we are working in GeV here
-        T_b = (((D * np.sqrt(self.m_b)) / x) ** (1 / 3)).to(
+        )
+        return (((D * np.sqrt(self.m_b)) / x) ** (1 / 3)).to(
             u.GeV, equivalencies=u.temperature_energy()
         )
-        return T_b
 
     def pred_T_b(
         self, p0
@@ -287,7 +232,7 @@ class Cluster:
     def pred_T_b_1(
         self, p0, m_chi
     ):  # p0 is a vector with p0[0] = log(sigma0), m_chi is log(m_chi)
-        x0 = 1e-5 * u.GeV  # starting estimate (could even do this using T_b_small)
+        x0 = 1e-5 * u.GeV  
         p0 = [p0[0], m_chi]
         solution = root(fun, x0, args=(self, p0)).x
         return solution[0] * u.GeV
@@ -304,7 +249,6 @@ class Cluster:
             u_th = (T_chi/m_chi + self.baryon_temp/self.m_b)**(1/2)
             dm_cooling_rate = -(self.cooling_factors() * (T_chi-self.baryon_temp) * sigma0*u_th/(m_chi+self.m_b)**2).to(u.erg/u.s)
 
-
             rad_factors = ((const.h*(T_b/(1e8*u.K))**(1/2))/(Z**2 * const.k_B * T_b * self.volume * self.n_e**2))
             return (rad_factors*dm_cooling_rate).to(u.erg*u.cm**3)
-        #(self.cooling_factors()*(T_chi-self.baryon_temp)*sigma0*u_th/(m_chi+self.m_b)**2 * (const.h/(Z**2 * const.k_B * self.baryon_temp*self.volume))).to(u.cm**3 * u.erg)
+

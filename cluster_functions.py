@@ -24,10 +24,7 @@ def temp_from_luminosity(luminosity):
 
 def fun(T_b, cluster, p0, f_chi=1, n=0):
     T_b = T_b * u.GeV
-
-    # sigma0=np.float_power(10, p0[0].astype(dtype=np.float128))*u.cm**2
     sigma0 = 10 ** p0[0] * u.cm**2
-    # m_chi = np.float_power(10, p0[1].astype(dtype=np.float128))*u.GeV
     m_chi = 10 ** p0[1] * u.GeV
 
     norm = cluster.norm
@@ -43,7 +40,7 @@ def fun(T_b, cluster, p0, f_chi=1, n=0):
     accretion_factors = norm * 4 * np.pi * (const.G * bh_mass) ** 2
     plasma_entropy_factors = ((mu * m_b) ** (5 / 2) * nb) / gamma ** (
         3 / 2
-    )  # no k_b because T_b in GeV
+    )
     cooling_factors = cluster.cooling_factors(n=n, f_chi=f_chi)
 
     B = (efficiency * accretion_factors * plasma_entropy_factors) / (cooling_factors)

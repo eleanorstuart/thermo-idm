@@ -20,6 +20,12 @@ def load_clusters(nrows=None):
 
     cls_table=QTable(cls_data, units=units)
 
-    clusters = [Cluster(cls_table['R500'][i], cls_table['M500'][i], L500=cls_table['L500'][i], m500=cls_table['M500'][i]) for i in range(mcxccls.shape[0])]
-    #TODO: Implement variance
-    return clusters 
+    return [
+        Cluster(
+            cls_table['R500'][i],
+            cls_table['M500'][i],
+            L500=cls_table['L500'][i],
+            m500=cls_table['M500'][i],
+        )
+        for i in range(mcxccls.shape[0])
+    ] # TODO: Implement variance

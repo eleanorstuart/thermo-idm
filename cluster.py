@@ -302,7 +302,9 @@ class Cluster:
             Z=1
 
             u_th = (T_chi/m_chi + self.baryon_temp/self.m_b)**(1/2)
-            dm_cooling_rate = (self.cooling_factors() * (T_chi-self.baryon_temp) * sigma0*u_th/(m_chi+self.m_b)**2).to(u.erg/u.s)
-            rad_factors = ((const.h)/(Z**2 * const.k_B * T_b * self.volume)).to(u.s/u.cm**3)
-            return rad_factors
+            dm_cooling_rate = -(self.cooling_factors() * (T_chi-self.baryon_temp) * sigma0*u_th/(m_chi+self.m_b)**2).to(u.erg/u.s)
+
+
+            rad_factors = ((const.h*(T_b/(1e8*u.K))**(1/2))/(Z**2 * const.k_B * T_b * self.volume * self.n_e**2))
+            return (rad_factors*dm_cooling_rate).to(u.erg*u.cm**3)
         #(self.cooling_factors()*(T_chi-self.baryon_temp)*sigma0*u_th/(m_chi+self.m_b)**2 * (const.h/(Z**2 * const.k_B * self.baryon_temp*self.volume))).to(u.cm**3 * u.erg)

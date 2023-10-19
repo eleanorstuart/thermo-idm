@@ -252,3 +252,9 @@ class Cluster:
             rad_factors = ((const.h*(T_b/(1e8*u.K))**(1/2))/(Z**2 * const.k_B * T_b * self.volume * self.n_e**2))
             return (rad_factors*dm_cooling_rate).to(u.erg*u.cm**3)
 
+    def pred_Tb_pref(self, p0):
+        #p0 is a choice for radiation prefactors
+        x0 = 1e-5 * u.GeV  
+        solution = root(funp, x0, args=(self, p0), method='df-sane').x
+        print(p0,solution)
+        return solution * u.GeV #solution[0] * u.GeV

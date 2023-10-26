@@ -29,9 +29,9 @@ def log_likelihood(p0, data, var, clusters, pred_func: str): #pred_func is the n
     return (-X2/2)
 
 def log_likelihood_2(p0, data, var, clusters, pred_func: str): #pred_func is the name of one of the pred_ methods
-    if p0[0]>0 or p0[0]<-40:
+    if p0[0]>-5 or p0[0]<-40:
         return -np.inf
-    if p0[1]<-10 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+    if p0[1]<-20 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
         return -np.inf
 
     #if p0>-20 or p0<-60:

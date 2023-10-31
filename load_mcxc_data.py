@@ -3,6 +3,10 @@ import numpy as np
 from astropy.table import QTable
 from astropy import units as u
 
+from uncertainties import ufloat
+from uncertainties.umath import *
+from uncertainties import unumpy as unp
+
 from cluster import Cluster
 
 def load_clusters(nrows=None):
@@ -31,9 +35,22 @@ def load_clusters(nrows=None):
         for i in range(mcxccls.shape[0])
     ], [variance(l) for l in cls_table['L500']] 
 
-def variance(luminosity): # TODO: check units on variance
-    logL=np.log10(luminosity)
-    return 0.1206 * np.sqrt(
-        10 ** (-0.6944 * (45.06 - logL))
-        * (8721 - 387.0 * logL + 4.295 * logL**2)
-    ) #returns variance in Kelvin (needs to be checked)
+def variance(luminosity): # returns the variance on calculated temperature
+     # TODO: add variance on luminosity
+    #logL=np.log10((luminosity.to(1e44*u.erg/u.s))/(1e44*u.erg/u.s))
+
+    A=ufloat(2.88, 0.15)
+    B=ufloat(45.06, 0.03)
+
+    lum = luminosity.to(u.erg / u.s)
+    log_T = (np.log10(lum.value) - B) / A + np.log10(6)
+    #T = (10**log_T * u.keV).to(u.GeV)
+
+    T = 10**log_T * 1e-6 #divide by 10^6 to convert keV to GeV
+
+    return T.std_dev *u.GeV #variances on T in GeV
+
+    #return 0.1206 * np.sqrt(
+    #    10 ** (-0.6944 * (45.06 - logL))
+    #    * (8721 - 387.0 * logL + 4.295 * logL**2)
+    #) #returns variance in Kelvin (needs to be checked)

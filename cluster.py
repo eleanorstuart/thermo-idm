@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy import constants as const
-from scipy.optimize import root
+from scipy.optimize import root, brentq
 from dataclasses import dataclass
 
 from plotting import savefig, paper_plot
@@ -149,7 +149,7 @@ class Cluster:
         plt.ylabel(r"$T_{\chi} (GeV)$")
         plt.legend(loc="upper left")
 
-    def plot_sigma0_vs_m_chi(self, f_chi=None, m_psi=None, n=None, Qh_dot: callable = None, region=False, save=False, **kwargs):
+    def plot_sigma0_vs_m_chi(self, f_chi=None, m_psi=None, n=None, Qh_dot: callable = None, region=False, save=False, minimal=False, **kwargs):
         if f_chi is None:
             f_chi = [1]
         if m_psi is None:
@@ -162,8 +162,13 @@ class Cluster:
         params = [(f, m, i) for f in f_chi for m in m_psi for i in n]
         for f, m, i in params:
             sigma0 = self.sigma0(f_chi=f, m_psi=m, n=i, Qh_dot=Qh_dot)
-            label = f"$f_{{\chi}}={f}$, $n={i}$" 
-            label = f"{label}, $m_{{\psi}}={m}$" if f < 1 else label
+            label = f"$f_{{\chi}}={f}$"
+            if not minimal:
+                    label = (
+                    f"{label}, $m_{{\psi}}={m.to(u.GeV).value}$"+r"$\mathrm{(GeV)}$"
+                    if f < 1
+                    else label
+                )
             plt.loglog(self.m_chi[: sigma0.shape[0]], sigma0, label=label)
             if region:
                 plt.fill_between(
@@ -226,16 +231,20 @@ class Cluster:
         self, p0
     ):  # p0 is a vector with p0[0] = log(sigma0) and p0[1]=log(m_chi)
         x0 = 1e-5 * u.GeV  # starting estimate (could even do this using T_b_small)
-        solution = root(funr, x0, args=(self, p0)).x
-        return solution[0] * u.GeV
+       #solution = root(funr, x0, args=(self, p0)).x
+       # return solution[0] * u.GeV
+
+
 
     def pred_T_b_1(
-        self, p0, m_chi
+        self, s0, m_chi
     ):  # p0 is a vector with p0[0] = log(sigma0), m_chi is log(m_chi)
-        x0 = 1e-5 * u.GeV  
-        p0 = [p0[0], m_chi]
-        solution = root(fun, x0, args=(self, p0)).x
-        return solution[0] * u.GeV
+        #x0 = 1e-5 * u.GeV  
+        p0 = [s0, m_chi]
+        #solution = root(funr, x0, args=(self, p0), method='df-sane').x
+        solution = brentq(funr_new, -15, 0, args=(self, p0))
+        #print(solution)
+        return solution* u.GeV
 
     def pred_pref(self, p0):
         # predicts the radiation prefactors given vector p0=[log(sigma0), log(m_chi)]

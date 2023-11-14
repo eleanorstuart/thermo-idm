@@ -237,14 +237,14 @@ class Cluster:
 
 
     def pred_T_b_1(
-        self, s0, m_chi
+        self, s0, m_chi, n
     ):  # p0 is a vector with p0[0] = log(sigma0), m_chi is log(m_chi)
         #x0 = 1e-5 * u.GeV  
         p0 = [s0, m_chi]
         #solution = root(funr, x0, args=(self, p0), method='df-sane').x
-        solution = brentq(funr_new, -15, 0, args=(self, p0))
+        solution = brentq(funr_new, -500, 300, args=(self, p0, n))
         #print(solution)
-        return solution* u.GeV
+        return 10**(solution)* u.GeV
 
     def pred_pref(self, p0):
         # predicts the radiation prefactors given vector p0=[log(sigma0), log(m_chi)]

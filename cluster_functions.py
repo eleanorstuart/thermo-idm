@@ -73,7 +73,7 @@ def funr(T_b, cluster, p0, f_chi=1, n=0):
 
     return (T_chi / m_chi + T_b / m_b) ** (1 / 2) * (T_chi-T_b)/T_b**(1/2) - (frac1*frac2)/const.c
 
-def funr_new(log_T_b, cluster, p0, f_chi=1, n=0):
+def funr_new(log_T_b, cluster, p0, n=0, f_chi=1):
     T_b = 10**log_T_b * u.GeV
     sigma0 = np.float128(10 ** p0[0]) * u.cm**2
     m_chi = 10 ** p0[1] * u.GeV
@@ -88,11 +88,15 @@ def funr_new(log_T_b, cluster, p0, f_chi=1, n=0):
 
     T_chi=cluster.virial_temperature(m_chi)
 
+    uth=(T_chi / m_chi + T_b / m_b)**(1/2)
+
     frac1=((m_chi+m_b)**2/(3*rho_chi*m_b*sigma0*c(n))).to(u.m) #factors coming from cooling term
     #print(frac1)
     frac2=(pref*n_b*Z**2/const.h).to(1/u.s, equivalencies=u.temperature_energy()) #factors coming from heating term
     #print(frac2)
-    T_terms=((T_chi / m_chi + T_b / m_b) ** (-1 / 2) * (T_chi-T_b)/(T_b**(1/2)*((1e8*u.K*const.k_B).to(u.GeV))**(1/2)))
+    #T_terms=((T_chi / m_chi + T_b / m_b) ** (-1 / 2) * (T_chi-T_b)/(T_b**(1/2)*((1e8*u.K*const.k_B).to(u.GeV))**(1/2)))
+
+    T_terms=(uth ** (-(n+1)) * (T_chi-T_b)/(T_b**(1/2)*((1e8*u.K*const.k_B).to(u.GeV))**(1/2)))
     #print((frac1*frac2)/const.c)
     return T_terms + (frac1*frac2)/const.c
 

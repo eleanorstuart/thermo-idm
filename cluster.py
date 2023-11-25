@@ -267,3 +267,6 @@ class Cluster:
         solution = root(funp, x0, args=(self, p0), method='df-sane').x
         print(p0,solution)
         return solution * u.GeV #solution[0] * u.GeV
+
+
+

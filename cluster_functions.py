@@ -130,3 +130,4 @@ def funp(T_b, cluster, p0, f_chi=1, n=0):
         return (((T_b - T_chi).to(u.J)).to(u.K) * (T_chi / m_chi + T_b / m_b) ** (1 / 2) * T_b.to(u.K) ** (
             -1 / 2)).to(u.K**(1/2)) - RHS #LHS - RHS
 
+

@@ -1,6 +1,9 @@
 import numpy as np
 from astropy import units as u
 from astropy import constants as const
+from scipy.optimize import brentq
+from statistics_functions import chi_squared
+from cluster_functions import c
 
 def radiative_cooling_rate(T_b, cluster):
     prefactors=6.8*1e-42 *u.erg*u.cm**3
@@ -28,7 +31,7 @@ def plasma_entropy(T_b, cluster):
     return (const.k_B * T_b.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / baryon_number_density ** (cluster.adiabatic_idx - 1)
 
-def dm_cooling_rate(T_b, cluster, s0, m_chi=1e-2*u.GeV, n=0, f_chi=1, m_psi=0.1*u.GeV):
+def dm_cooling_rate(T_b, cluster, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
     dm_temp = cluster.virial_temperature(m_chi, f_chi=f_chi, m_psi=m_psi)
     uth = np.sqrt(T_b / cluster.m_b + dm_temp / m_chi)
     rho_chi = cluster.rho_dm * f_chi
@@ -49,11 +52,19 @@ def dm_cooling_rate(T_b, cluster, s0, m_chi=1e-2*u.GeV, n=0, f_chi=1, m_psi=0.1*
     #conversion_factor = 0.197*1e-15 * (u.GeV * u.m)
     return (numerator / denominator).to(u.erg/u.s)
 
-def equil(logT_b, cluster, p0):
+def equil(logT_b, cluster, sig_0, m_chi):
     #divide agn_heating_rate by 1e5 to put it at the same oom as the cooling
-    s0=10**p0 * u.cm**2
+    s0=10**sig_0 * u.cm**2
+    mx=10**m_chi *u.GeV
     T_b=10**(logT_b)*u.GeV
     return (
         (agn_heating_rate(T_b, cluster)/1e5).to(u.erg/u.s) 
-        - dm_cooling_rate(T_b, cluster, s0) 
+        - dm_cooling_rate(T_b, cluster, s0, mx) 
         - radiative_cooling_rate(T_b, cluster)).value
+
+def log_lik(p0, T_data, var, clusters, m_chi):
+    if p0<-50 or p0>0:
+        return -np.inf
+    T_model = [brentq(equil, -15, 0, args=(c, p0)) for c in clusters]
+    X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
+    return (-X2/2)

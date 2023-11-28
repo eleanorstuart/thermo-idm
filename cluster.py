@@ -108,8 +108,8 @@ class Cluster:
             u.GeV
         )
 
-    def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0, Qh_dot: callable = None):
-        total_heating_rate = Qh_dot() if Qh_dot else self.radiative_cooling_rate()
+    def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0, Qh_dot = None):
+        total_heating_rate = Qh_dot or self.radiative_cooling_rate()
 
         valid_m_chis = self.m_chi[
             np.where(
@@ -149,7 +149,7 @@ class Cluster:
         plt.ylabel(r"$T_{\chi} (GeV)$")
         plt.legend(loc="upper left")
 
-    def plot_sigma0_vs_m_chi(self, f_chi=None, m_psi=None, n=None, Qh_dot: callable = None, region=False, save=False, minimal=False, **kwargs):
+    def plot_sigma0_vs_m_chi(self, f_chi=None, m_psi=None, n=None, Qh_dot = None, region=False, save=False, minimal=False, **kwargs):
         if f_chi is None:
             f_chi = [1]
         if m_psi is None:

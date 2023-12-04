@@ -1,6 +1,9 @@
 import numpy as np
 from astropy import constants as const
 from astropy import units as u
+from scipy.optimize import brentq
+
+from equilibrium_functions import equil
 
 def chi_squared(model, data, variance): # take lists of model prediction, data, and variance of same length
     return sum((model[i]-data[i])**2/variance[i]**2 for i in range(len(data)))
@@ -42,4 +45,15 @@ def log_likelihood_2(p0, data, var, clusters, pred_func: str): #pred_func is the
     model = [getattr(c, pred_func)(p0) for c in clusters]
     X2 = chi_squared(model, data, var)
     print(p0)
+    return (-X2/2)
+
+
+def log_lik_eq(p0, T_data, var, clusters):
+    if p0[0]<-40 or p0[0]>-10:
+        return -np.inf
+    if p0[1]<-3 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+        return -np.inf
+    #print(p0)
+    T_model = [brentq(equil, -10, 0, args=(c, p0[0], p0[1])) for c in clusters]
+    X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
     return (-X2/2)

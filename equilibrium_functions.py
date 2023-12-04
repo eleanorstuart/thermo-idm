@@ -1,8 +1,8 @@
 import numpy as np
 from astropy import units as u
 from astropy import constants as const
-from scipy.optimize import brentq
-from statistics_functions import chi_squared
+#from scipy.optimize import brentq
+#from statistics_functions import chi_squared
 from cluster_functions import c
 
 def radiative_cooling_rate(T_b, cluster):
@@ -62,9 +62,9 @@ def equil(logT_b, cluster, sig_0, m_chi):
         - dm_cooling_rate(T_b, cluster, s0, mx) 
         - radiative_cooling_rate(T_b, cluster)).value
 
-def log_lik(p0, T_data, var, clusters, m_chi):
-    if p0<-50 or p0>0:
-        return -np.inf
-    T_model = [brentq(equil, -15, 0, args=(c, p0)) for c in clusters]
-    X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
-    return (-X2/2)
+#def log_lik(p0, T_data, var, clusters, m_chi):
+#    if p0<-50 or p0>0:
+#        return -np.inf
+#    T_model = [brentq(equil, -15, 0, args=(c, p0)) for c in clusters]
+#    X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
+#    return (-X2/2)

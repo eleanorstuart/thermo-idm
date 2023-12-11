@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from astropy.table import QTable
 from astropy import units as u
+import astropy.cosmology.units as cu
 
 from uncertainties import ufloat
 from uncertainties.umath import *
@@ -21,12 +22,14 @@ def load_clusters(nrows=None, dataset='REFLEX'):
 
     cls_data={'M500':selected_cls['M500'],
           'L500':selected_cls['L500'],
-          'R500':selected_cls['R500']
+          'R500':selected_cls['R500'],
+          'z':selected_cls['R500']
          }
     units={
         'M500': 1e14*u.Msun,
         'L500': 1e37*u.W,
-        'R500':u.Mpc
+        'R500':u.Mpc,
+        'z': cu.redshift
     }
 
     cls_table=QTable(cls_data, units=units)
@@ -40,6 +43,7 @@ def load_clusters(nrows=None, dataset='REFLEX'):
         Cluster(
             cls_table['R500'][i],
             cls_table['M500'][i],
+            cls_table['z'][i],
             L500=cls_table['L500'][i],
             m500=cls_table['M500'][i],
         )

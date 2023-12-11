@@ -2,7 +2,6 @@ import numpy as np
 import sympy as sp
 
 from astropy import units as u
-from matplotlib import pyplot as plt
 from scipy.integrate import quad
 from scipy.optimize import approx_fprime
 

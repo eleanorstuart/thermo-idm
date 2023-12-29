@@ -67,9 +67,9 @@ class Cluster:
 
         if self.eff_agn_heating_rate is None:
             #TODO implement this better when I have an argument for Linj and rc
-            Linj=7*1e44*u.erg/u.s
-            rc=0.3*self.radius
-            self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(Linj, rc)
+            #Linj=7*1e44*u.erg/u.s
+            rc_factor=0.3
+            self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(rc_factor)
 
         
 
@@ -97,9 +97,17 @@ class Cluster:
             const.k_B * self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / baryon_number_density ** (self.adiabatic_idx - 1)
 
-    def get_effervescent_agn_heating_rate(self, Linj, rc):
+    def injected_energy(self, rc_factor): #rc_factor such that rcutoff=rc_factor*R500
+        Mvir=(1.25*self.mass).to(u.Msun) # based on Iqbal assumption 
+        if rc_factor==0.3:
+            log_Linj = -0.96 + 1.73 * np.log10(Mvir/(1e14*u.Msun))
+            Linj = np.power(10, log_Linj) * 1e45 * u.erg/u.s
+        return Linj
+    
+    def get_effervescent_agn_heating_rate(self, rc_factor):
         # TODO: implement method, make heating rate function take a class
-        return (vol_heating_rate(self.radius, self.radius, self.mass, self.z, Linj, rc) * self.volume).to(u.erg/u.s)
+        Linj=self.injected_energy(rc_factor)
+        return (vol_heating_rate(self.radius, self.radius, self.mass, self.z, Linj, rc_factor*self.radius) * self.volume).to(u.erg/u.s)
 
 
     def radiative_cooling_rate(self):

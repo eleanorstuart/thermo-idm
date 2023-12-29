@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from plotting import savefig, paper_plot
 from cluster_functions import * 
 from iqbal_agn_heating_functions import vol_heating_rate
+from cluster_timescales import ClusterTimescales
 
 
 
@@ -59,7 +60,7 @@ class Cluster:
             raise ValueError("Must provide a velocity dispersion or luminosity")
 
         # radiative cooling params
-        self.n_e = self.rho_b / self.m_b  # number density of electrons
+        #self.n_e = self.rho_b / self.m_b  # number density of electrons
 
         # setup AGN heating
         if self.bh_mass is None:
@@ -70,6 +71,8 @@ class Cluster:
             #Linj=7*1e44*u.erg/u.s
             rc_factor=0.3
             self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(rc_factor)
+
+        self.timescales=ClusterTimescales(self.radius, self.mass, self.L500)
 
         
 
@@ -110,14 +113,14 @@ class Cluster:
         return (vol_heating_rate(self.radius, self.radius, self.mass, self.z, Linj, rc_factor*self.radius) * self.volume).to(u.erg/u.s)
 
 
-    def radiative_cooling_rate(self):
-        prefactors=6.8*1e-42 *u.erg*u.cm**3
-        Z=1
-        T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
-        T8=T/(1e8*u.K)
-        C=(prefactors*Z**2*(self.n_e.to(u.cm**-3))**2)/(T8**(1/2))
-        Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
-        return (self.volume*Eff_int).to(u.erg/u.s)
+    # def radiative_cooling_rate(self):
+    #     prefactors=6.8*1e-42 *u.erg*u.cm**3
+    #     Z=1
+    #     T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
+    #     T8=T/(1e8*u.K)
+    #     C=(prefactors*Z**2*(self.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+    #     Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
+    #     return (self.volume*Eff_int).to(u.erg/u.s)
 
     def luminosity(self):
         T = temp_from_vdisp(self.v500).to(u.K, equivalencies=u.temperature_energy())
@@ -135,7 +138,8 @@ class Cluster:
 
     def sigma0(self, f_chi=1, m_psi=0.1 * u.GeV, n=0, Qh_dot = None):
         #total_heating_rate = Qh_dot or self.radiative_cooling_rate()
-        total_heating_rate=self.eff_agn_heating_rate - self.radiative_cooling_rate()
+        #total_heating_rate=self.eff_agn_heating_rate - self.radiative_cooling_rate()
+        total_heating_rate=self.eff_agn_heating_rate - self.timescales.radiative_cooling_rate()
 
         valid_m_chis = self.m_chi[
             np.where(

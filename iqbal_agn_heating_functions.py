@@ -46,7 +46,7 @@ def integrand(r, R500, M500, z, r0, rc):
     integrand=(((Pg(x, z, M500))**((gamma_b-1)/gamma_b)).to(u.erg**(1/4)*u.cm**(-3/4))
                *(1/Pg(x, z, M500)).to(u.cm**3/u.erg) 
                #*np.array([dP_dr([rad.value], R500, M500, z).to(u.erg*u.cm**(-3)*u.Mpc**(-1)) for rad in rs]) 
-               *dP_dr(r.value, R500, M500, z)
+               *dP_dr(r.value, R500, M500, z).to(u.erg/(u.cm**3 * u.Mpc))
                *(1-np.exp(-1*r/r0)).to(1)
                *(np.exp(-1*r/rc)).to(1))
     return integrand.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
@@ -72,3 +72,16 @@ def vol_heating_rate(r, R500, M500, z, Linj, rc):
         *(r/Pg(x, z, M500))    
         *dP_dr([r.to(u.Mpc).value], R500, M500, z)).to(u.erg/(u.s*u.cm**3)) 
 
+def cooling_function(T):
+    alpha=1.7
+    beta=0.5
+    c1 = 8.6*1e-25 * u.erg*u.cm**3/u.s * u.keV**(-alpha)
+    c2= 5.8*1e-24*u.erg*u.cm**3/u.s * u.keV**(-beta)
+    c3=6.3*1e-24*u.erg*u.cm**3/u.s
+
+
+
+def vol_cooling_rate():
+    mu_h=1.26
+    mu_e=1.44
+    return

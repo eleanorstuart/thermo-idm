@@ -73,7 +73,7 @@ def vol_heating_rate(r, R500, M500, z, Linj, rc):
         *dP_dr([r.to(u.Mpc).value], R500, M500, z)).to(u.erg/(u.s*u.cm**3)) 
 
 def cooling_function(T):
-    alpha=1.7
+    alpha=-1.7
     beta=0.5
     c1 = 8.6*1e-25 * u.erg*u.cm**3/u.s * u.keV**(-alpha)
     c2= 5.8*1e-24*u.erg*u.cm**3/u.s * u.keV**(-beta)
@@ -92,8 +92,8 @@ def virial_radius(Mvir, z):
     return(Mvir/(4*np.pi/3 * overdensity(z) * cosmo.critical_density(z)))**(1/3)
 
 def c_vir(Mvir, z):
-    h=1 # TODO: set this properly
-    return (7.85*(Mvir/(2*1e12 * h * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
+    h=0.7 # TODO: set this properly
+    return (7.85*(Mvir/(2*1e12 * 0.7 * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
 
 def scale_radius(Mvir, z):
     return (virial_radius(Mvir, z)/c_vir(Mvir, z)).to(u.Mpc)

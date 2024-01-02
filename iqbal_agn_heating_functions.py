@@ -78,10 +78,22 @@ def cooling_function(T):
     c1 = 8.6*1e-25 * u.erg*u.cm**3/u.s * u.keV**(-alpha)
     c2= 5.8*1e-24*u.erg*u.cm**3/u.s * u.keV**(-beta)
     c3=6.3*1e-24*u.erg*u.cm**3/u.s
+    return (c1*(T)**alpha + c2*T**beta + c3).to(u.erg*u.cm**3/u.s)
 
-
-
-def vol_cooling_rate():
+def vol_cooling_rate(n_e, T):
     mu_h=1.26
     mu_e=1.44
-    return
+    return (n_e**2 * cooling_function(T) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
+
+def overdensity(z):
+    return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
+
+def virial_radius(Mvir, z):
+    return(Mvir/(4*np.pi/3 * overdensity(z) * cosmo.critical_density(z)))**(1/3)
+
+def c_vir(Mvir, z):
+    h=1 # TODO: set this properly
+    return (7.85*(Mvir/(2*1e12 * h * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
+
+def scale_radius(Mvir, z):
+    return (virial_radius(Mvir, z)/c_vir(Mvir, z)).to(u.Mpc)

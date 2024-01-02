@@ -4,7 +4,7 @@ from astropy import constants as const
 from cluster_functions import *
 
 @dataclass
-class ClusterTimescales: # TODO: figure out what to do with attributes that are calculated here and in main class
+class ClusterTimescales: # TODO: figure out what to do with attributes that are calculated here and in main class (volume and fb)
     radius: float = 1 * u.Mpc
     mass: float = 1.0e14 * u.Msun
     luminosity: float = None
@@ -13,8 +13,8 @@ class ClusterTimescales: # TODO: figure out what to do with attributes that are 
     def __post_init__(self):
         self.mass = self.mass.to(u.GeV)  # total mass
         self.baryon_temp = temp_from_luminosity(self.luminosity)
-        self.N_b = self.fb*self.mass/const.m_p.to(u.GeV) # number of baryons (might need to be 2x this?)
         self.volume = 4 / 3 * np.pi * self.radius**3
+        self.N_b = self.fb*self.mass/const.m_p.to(u.GeV) # number of baryons (might need to be 2x this?)
         self.n_e = self.N_b/self.volume # number density of electrons/baryons
 
     def dynamical_time(self): # from GFE

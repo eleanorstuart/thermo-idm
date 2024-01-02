@@ -91,8 +91,11 @@ class Cluster:
 
     def get_bh_mass(self):
         slope = 1.39
-        intercept = -9.56 * u.Msun
-        return (slope * self.m500 + intercept).to(u.kg)
+        intercept = -9.56 #* u.Msun
+        rhs=slope * np.log10(self.m500/u.Msun) + intercept
+        return np.power(10, rhs) * u.Msun
+        #return (slope * self.m500 + intercept).to(u.kg)
+
 
     def plasma_entropy(self):
         baryon_number_density = (2 * self.n_e).to(u.m ** (-3))
@@ -104,6 +107,9 @@ class Cluster:
         Mvir=(1.25*self.mass).to(u.Msun) # based on Iqbal assumption 
         if rc_factor==0.3:
             log_Linj = -0.96 + 1.73 * np.log10(Mvir/(1e14*u.Msun))
+            Linj = np.power(10, log_Linj) * 1e45 * u.erg/u.s
+        if rc_factor==0.1:
+            log_Linj = -1.58 + 1.52 * np.log10(Mvir/(1e14*u.Msun))
             Linj = np.power(10, log_Linj) * 1e45 * u.erg/u.s
         return Linj
     

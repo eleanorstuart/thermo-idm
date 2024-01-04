@@ -9,6 +9,7 @@ from plotting import savefig, paper_plot
 from cluster_functions import * 
 from iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
+from cluster_data import ClusterData
 
 
 
@@ -31,7 +32,7 @@ class Cluster:
     epsilon: float = 0.01
     fb: float = 0.1
     fdm: float = 0.9
-    m500: float = None
+    #m500: float = None
     v500: float = 0.0 * u.km / u.s
     m_chi: np.ndarray = np.logspace(-5, 3, num=100) * u.GeV
     m_b: float = const.m_p.to(u.GeV)  # baryon particle mass
@@ -46,6 +47,9 @@ class Cluster:
 
     def __post_init__(self):
         # General - read from data
+
+        #self.data=ClusterData(self.radius, self.mass, self.z, self.L500)
+
         self.mass = self.mass.to(u.GeV)  # total mass
         self.volume = 4 / 3 * np.pi * self.radius**3  # cluster volume
         self.rho_tot = (self.mass / self.volume).to(u.GeV / u.cm**3)  # total density
@@ -72,7 +76,7 @@ class Cluster:
             rc_factor=0.3
             self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(rc_factor)
 
-        self.timescales=ClusterTimescales(self.radius, self.mass, self.L500)
+        self.timescales=ClusterTimescales(self.data)
 
         
 
@@ -92,9 +96,8 @@ class Cluster:
     def get_bh_mass(self):
         slope = 1.39
         intercept = -9.56 #* u.Msun
-        rhs=slope * np.log10(self.m500/u.Msun) + intercept
+        rhs=slope * np.log10(self.mass/u.Msun) + intercept
         return np.power(10, rhs) * u.Msun
-        #return (slope * self.m500 + intercept).to(u.kg)
 
 
     def plasma_entropy(self):

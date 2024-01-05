@@ -10,6 +10,7 @@ from uncertainties.umath import *
 from uncertainties import unumpy as unp
 
 from cluster import Cluster
+from cluster_measurements import ClusterMeasurements
 
 def load_clusters(nrows=None, dataset='REFLEX'):
     skipfooter=0 if nrows else 1
@@ -17,8 +18,6 @@ def load_clusters(nrows=None, dataset='REFLEX'):
     mcxccls.columns=mcxccls.columns.str.strip()
 
     selected_cls=mcxccls[mcxccls['Sub-Cat'].str.strip()==dataset]
-    
-
 
     cls_data={'M500':selected_cls['M500'],
           'L500':selected_cls['L500'],
@@ -38,17 +37,15 @@ def load_clusters(nrows=None, dataset='REFLEX'):
         L_uncertainties=np.array(pickle.load(fp))
     L_uncertainties_conv=(L_uncertainties*1e37*u.W).to(u.erg / u.s).value
     
+    cluster_measurements = [ClusterMeasurements(
+        cls_table['R500'][i], 
+        cls_table['M500'][i],
+        cls_table['z'][i],
+        cls_table['L500'][i], 
+        T_var = variance(cls_table['L500'][i], L_uncertainties_conv[i])) for i in range(nrows)]
 
-    return [ 
-        Cluster(
-            cls_table['R500'][i],
-            cls_table['M500'][i],
-            cls_table['z'][i],
-            L500=cls_table['L500'][i],
-            m500=cls_table['M500'][i],
-        )
-        for i in range(nrows)#(mcxccls.shape[0])
-    ], [variance(cls_table['L500'][i], L_uncertainties_conv[i]) for i in range(nrows)] 
+    #return [Cluster(cm)for cm in cluster_measurements], [variance(cls_table['L500'][i], L_uncertainties_conv[i]) for i in range(nrows)] 
+    return [Cluster(cm)for cm in cluster_measurements]
 
 def variance(luminosity, l_unc): # returns the variance on calculated temperature
      # TODO: TEST THIS NOW THAT I HAVE ADDED L_unc

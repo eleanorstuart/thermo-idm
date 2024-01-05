@@ -20,41 +20,55 @@ gamma_b=4./3.
 def E(z): #ratio of the Hubble constant at redshift z to its present value
     return cosmo.H(z)/cosmo.H(0)
 
-def P500(z, M500):
-    M500=M500.to(u.Msun)
-    return ((1.65*1e-3*E(z)**(8/3)
-            *(M500/(3*1e14*h70**(-1)*u.Msun))**2/3 
+def P500(measurements):
+    M500=measurements.M500.to(u.Msun)
+    return ((1.65*1e-3*E(measurements.z)**(8/3)
+            *(measurements.M500/(3*1e14*h70**(-1)*u.Msun))**2/3 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
 
-def Pg(x, z, M500): #x=r/r500
-    return (P0*P500(z, M500) #units keVcm-3
+def Pg(x, measurements): #x=r/r500
+    return (P0*P500(measurements) #units keVcm-3
            / ((c500*x)**gamma  #unitless
               * (1+ (c500*x)**alpha)**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
 
-def Pg_r(r, z, M500, R500):
-    return Pg(r/R500, z, M500).value
+def Pg_r(r, measurements):
+    if isinstance(r, float):
+        r = r*u.Mpc
+    return Pg(r/measurements.R500, measurements).value
 
-
-def dP_dr(r, R500, M500, z):
-    R500=R500.to(u.Mpc).value
-    gradients=approx_fprime(r, lambda r: Pg_r(r, z, M500, R500))
-    return np.array(gradients)*u.erg/(u.cm**3 * u.Mpc)
+def dP_dr(rad, measurements):
+    if isinstance(rad, u.Quantity):
+        rad.to(u.Mpc)
+        rad = rad.value
+    #rs = np.array(rad)
+    #return np.gradient(r, Pg_r(r*u.Mpc, measurements))*u.erg/(u.cm**3 * u.Mpc)
+    return [approx_fprime(r, lambda x: Pg_r(x*u.Mpc, measurements)) for r in rad]*u.erg/(u.cm**3 * u.Mpc)
     
-def integrand(r, R500, M500, z, r0, rc):
-    r=r*u.Mpc
-    x=r/R500
-    integrand=(((Pg(x, z, M500))**((gamma_b-1)/gamma_b)).to(u.erg**(1/4)*u.cm**(-3/4))
-               *(1/Pg(x, z, M500)).to(u.cm**3/u.erg) 
+def integrand(r, measurements, r0, rc):
+    r=r*u.Mpc if isinstance(r, float) else r
+    r0=r0*u.Mpc if isinstance(r0, float) else r0
+    rc=rc*u.Mpc if isinstance(rc, float) else rc
+    #if isinstance(r, float) r=r*u.Mpc else r
+    #    r=r*u.Mpc
+    x=r/measurements.R500
+    #print(r, r0, rc)
+    intgrd=(((Pg(x, measurements))**((gamma_b-1)/gamma_b)).to(u.erg**(1/4)*u.cm**(-3/4))
+               *(1/Pg(x, measurements)).to(u.cm**3/u.erg) 
                #*np.array([dP_dr([rad.value], R500, M500, z).to(u.erg*u.cm**(-3)*u.Mpc**(-1)) for rad in rs]) 
-               *dP_dr(r.value, R500, M500, z).to(u.erg/(u.cm**3 * u.Mpc))
+               *dP_dr([r.value], measurements).to(u.erg/(u.cm**3 * u.Mpc))
                *(1-np.exp(-1*r/r0)).to(1)
                *(np.exp(-1*r/rc)).to(1))
-    return integrand.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
+    #print(((Pg(x, measurements))**((gamma_b-1)/gamma_b)).to(u.erg**(1/4)*u.cm**(-3/4)))
+    #print(intgrd)
+    return intgrd.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
     
-def q(R500, M500, z, r0, rc):
-    rini=0.015*R500.to(u.Mpc).value
-    rmax=R500.to(u.Mpc).value
-    integral, _ = quad(integrand, rini, rmax, args=(R500, M500, z, r0, rc))
+def q(measurements, r0, rc):
+    rini=0.015*measurements.R500.to(u.Mpc).value
+    rmax=measurements.R500.to(u.Mpc).value
+    integral, _ = quad(lambda r: integrand(r, measurements, r0, rc), 
+        rini, 
+        rmax, )
+        #args=(measurements, r0, rc))
     return integral*(u.erg**(1/4) * u.cm**(-3/4))
 
 def h(Linj, r, r0, rc, q):
@@ -63,14 +77,12 @@ def h(Linj, r, r0, rc, q):
             *np.exp(-1*r/rc)
             *(1/q))
 
-def vol_heating_rate(r, R500, M500, z, Linj, rc):
-    x=r/R500
-    r0=(0.015*R500).to(u.cm)
-    return (h(Linj, r, r0, rc, q(R500, M500, z, r0, rc))
-        *(Pg(x, z, M500))**((gamma_b-1)/gamma_b)
-        *(1/r)
-        *(r/Pg(x, z, M500))    
-        *dP_dr([r.to(u.Mpc).value], R500, M500, z)).to(u.erg/(u.s*u.cm**3)) 
+def vol_heating_rate(rs, measurements, Linj, rc):
+    #x=r/measurements.R500
+    r0=(0.015*measurements.R500).to(u.cm)
+    return np.array([(h(Linj, r, r0, rc, q(measurements, r0, rc))
+    *(Pg(r/measurements.R500,measurements))**((gamma_b-1)/gamma_b)
+    *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() 
 
 def cooling_function(T):
     alpha=-1.7

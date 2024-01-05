@@ -5,8 +5,9 @@ from cluster_functions import *
 
 
 @dataclass
-class ClusterData:
+class ClusterMeasurements:
     R500: float = 1 * u.Mpc
     M500: float = 1.0e14 * u.Msun
-    z: float = 0. # redshift
+    z: float = 0 # redshift
     L500: float = None
+    T_var: float = None

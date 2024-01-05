@@ -9,7 +9,7 @@ from plotting import savefig, paper_plot
 from cluster_functions import * 
 from iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
-from cluster_data import ClusterData
+from cluster_measurements import ClusterMeasurements
 
 
 
@@ -24,11 +24,12 @@ with u.set_enabled_equivalencies(u.mass_energy()):
 
 @dataclass
 class Cluster:
-    radius: float = 1 * u.Mpc
-    mass: float = 1.0e14 * u.Msun
-    z: float = 0. # redshift
+    measurements: None
+    #radius: float = 1 * u.Mpc
+    #mass: float = 1.0e14 * u.Msun
+    #z: float = 0. # redshift
     vel_disp: float = None
-    L500: float = None
+    #L500: float = None
     epsilon: float = 0.01
     fb: float = 0.1
     fdm: float = 0.9
@@ -48,18 +49,18 @@ class Cluster:
     def __post_init__(self):
         # General - read from data
 
-        #self.data=ClusterData(self.radius, self.mass, self.z, self.L500)
+        #self.measurements=ClusterData(self.radius, self.mass, self.z, self.L500)
 
-        self.mass = self.mass.to(u.GeV)  # total mass
-        self.volume = 4 / 3 * np.pi * self.radius**3  # cluster volume
-        self.rho_tot = (self.mass / self.volume).to(u.GeV / u.cm**3)  # total density
+        #self.mass = self.mass.to(u.GeV)  # total mass
+        self.volume = 4 / 3 * np.pi * self.measurements.R500**3  # cluster volume
+        self.rho_tot = (self.measurements.M500 / self.volume).to(u.GeV / u.cm**3)  # total density
         self.rho_b = self.rho_tot * self.fb  # baryon density
         self.rho_dm = self.rho_tot * self.fdm  # DM density
         if self.vel_disp is not None:
             if self.vel_disp.value:
                 self.baryon_temp = temp_from_vdisp(self.vel_disp)  # baryon temperature
-        elif self.L500.value:
-            self.baryon_temp = temp_from_luminosity(self.L500)
+        elif self.measurements.L500.value:
+            self.baryon_temp = temp_from_luminosity(self.measurements.L500)
         else:
             raise ValueError("Must provide a velocity dispersion or luminosity")
 
@@ -96,7 +97,7 @@ class Cluster:
     def get_bh_mass(self):
         slope = 1.39
         intercept = -9.56 #* u.Msun
-        rhs=slope * np.log10(self.mass/u.Msun) + intercept
+        rhs=slope * np.log10(self.measurements.M500/u.Msun) + intercept
         return np.power(10, rhs) * u.Msun
 
 
@@ -107,7 +108,7 @@ class Cluster:
         ).to(u.GeV) / baryon_number_density ** (self.adiabatic_idx - 1)
 
     def injected_energy(self, rc_factor): #rc_factor such that rcutoff=rc_factor*R500
-        Mvir=(1.25*self.mass).to(u.Msun) # based on Iqbal assumption 
+        Mvir=(1.25*self.measurements.M500).to(u.Msun) # based on Iqbal assumption 
         if rc_factor==0.3:
             log_Linj = -0.96 + 1.73 * np.log10(Mvir/(1e14*u.Msun))
             Linj = np.power(10, log_Linj) * 1e45 * u.erg/u.s
@@ -119,7 +120,7 @@ class Cluster:
     def get_effervescent_agn_heating_rate(self, rc_factor):
         # TODO: implement method, make heating rate function take a class
         Linj=self.injected_energy(rc_factor)
-        return (vol_heating_rate(self.radius, self.radius, self.mass, self.z, Linj, rc_factor*self.radius) * self.volume).to(u.erg/u.s)
+        return (vol_heating_rate(self.measurements.R500, self.measurements, Linj, rc_factor*self.measurements.R500) * self.volume).to(u.erg/u.s)
 
 
     # def radiative_cooling_rate(self):

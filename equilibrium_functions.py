@@ -10,9 +10,9 @@ def radiative_cooling_rate(T_b, cluster):
     Z=1
     T=T_b.to(u.K, equivalencies=u.temperature_energy())#self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
     T8=T/(1e8*u.K)
-    C=(prefactors*Z**2*(cluster.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+    C=(prefactors*Z**2*(cluster.measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
     Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
-    return (cluster.volume*Eff_int).to(u.erg/u.s)
+    return (cluster.measurements.volume*Eff_int).to(u.erg/u.s)
 
 def agn_heating_rate(T_b, cluster):
     with u.set_enabled_equivalencies(u.mass_energy()):
@@ -27,7 +27,7 @@ def accretion_rate(T_b, cluster):
         return leading_factors * gm2 * frac * plasma_entropy(T_b, cluster) ** (-3 / 2)
 
 def plasma_entropy(T_b, cluster):
-    baryon_number_density = (2 * cluster.n_e).to(u.m ** (-3))
+    baryon_number_density = (2 * cluster.measurements.n_e).to(u.m ** (-3))
     return (const.k_B * T_b.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / baryon_number_density ** (cluster.adiabatic_idx - 1)
 
@@ -42,7 +42,7 @@ def dm_cooling_rate(T_b, cluster, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
             * (T_b - dm_temp)
             * rho_chi
             * cluster.rho_b
-            * cluster.volume.to(u.cm**3)
+            * cluster.measurements.volume.to(u.cm**3)
             * c(n)
             * uth ** (n + 1)
             * (const.c.to(u.cm / u.s))

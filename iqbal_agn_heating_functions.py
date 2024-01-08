@@ -82,7 +82,7 @@ def vol_heating_rate(rs, measurements, Linj, rc):
     r0=(0.015*measurements.R500).to(u.cm)
     return np.array([(h(Linj, r, r0, rc, q(measurements, r0, rc))
     *(Pg(r/measurements.R500,measurements))**((gamma_b-1)/gamma_b)
-    *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() 
+    *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
 
 def cooling_function(T):
     alpha=-1.7
@@ -94,7 +94,7 @@ def cooling_function(T):
 
 def vol_cooling_rate(n_e, T):
     mu_h=1.26
-    mu_e=1.44
+    mu_e=1.14
     return (n_e**2 * cooling_function(T) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
 
 def overdensity(z):

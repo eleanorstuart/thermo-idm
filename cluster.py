@@ -31,7 +31,7 @@ class Cluster:
     vel_disp: float = None
     #L500: float = None
     epsilon: float = 0.01
-    fb: float = 0.1
+    #fb: float = 0.1
     fdm: float = 0.9
     #m500: float = None
     v500: float = 0.0 * u.km / u.s
@@ -52,9 +52,9 @@ class Cluster:
         #self.measurements=ClusterData(self.radius, self.mass, self.z, self.L500)
 
         #self.mass = self.mass.to(u.GeV)  # total mass
-        self.volume = 4 / 3 * np.pi * self.measurements.R500**3  # cluster volume
-        self.rho_tot = (self.measurements.M500 / self.volume).to(u.GeV / u.cm**3)  # total density
-        self.rho_b = self.rho_tot * self.fb  # baryon density
+        
+        self.rho_tot = (self.measurements.M500 / self.measurements.volume).to(u.GeV / u.cm**3)  # total density
+        self.rho_b = self.rho_tot * self.measurements.fb  # baryon density
         self.rho_dm = self.rho_tot * self.fdm  # DM density
         if self.vel_disp is not None:
             if self.vel_disp.value:
@@ -77,7 +77,7 @@ class Cluster:
             rc_factor=0.3
             self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(rc_factor)
 
-        self.timescales=ClusterTimescales(self.data)
+        self.timescales=ClusterTimescales(self.measurements)
 
         
 
@@ -102,7 +102,7 @@ class Cluster:
 
 
     def plasma_entropy(self):
-        baryon_number_density = (2 * self.n_e).to(u.m ** (-3))
+        baryon_number_density = (2 * self.measurements.n_e).to(u.m ** (-3))
         return (
             const.k_B * self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / baryon_number_density ** (self.adiabatic_idx - 1)
@@ -120,17 +120,20 @@ class Cluster:
     def get_effervescent_agn_heating_rate(self, rc_factor):
         # TODO: implement method, make heating rate function take a class
         Linj=self.injected_energy(rc_factor)
-        return (vol_heating_rate(self.measurements.R500, self.measurements, Linj, rc_factor*self.measurements.R500) * self.volume).to(u.erg/u.s)
+        return (vol_heating_rate([self.measurements.R500], self.measurements, Linj, rc_factor*self.measurements.R500) * self.measurements.volume).to(u.erg/u.s)
 
 
-    # def radiative_cooling_rate(self):
-    #     prefactors=6.8*1e-42 *u.erg*u.cm**3
-    #     Z=1
-    #     T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
-    #     T8=T/(1e8*u.K)
-    #     C=(prefactors*Z**2*(self.n_e.to(u.cm**-3))**2)/(T8**(1/2))
-    #     Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
-    #     return (self.volume*Eff_int).to(u.erg/u.s)
+    def radiative_cooling_rate(self):
+        prefactors=6.8*1e-42 *u.erg*u.cm**3
+        Z=1
+        T=self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
+        T8=T/(1e8*u.K)
+        C=(prefactors*Z**2*(self.measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+        Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
+        return (self.measurements.volume*Eff_int).to(u.erg/u.s)
+
+    def radiative_cooling_rate_iq(self):
+        return
 
     def luminosity(self):
         T = temp_from_vdisp(self.v500).to(u.K, equivalencies=u.temperature_energy())
@@ -141,8 +144,8 @@ class Cluster:
 
     def virial_temperature(self, m_chi, f_chi=1, m_psi=0.1 * u.GeV):
         frac = f_chi / m_chi + (1 - f_chi) / m_psi
-        M_kg = self.mass.to(u.kg, equivalencies=u.mass_energy())
-        return (0.3 * const.G * M_kg / (self.radius * frac) * 1 / const.c**2).to(
+        M_kg = self.measurements.M500.to(u.kg, equivalencies=u.mass_energy())
+        return (0.3 * const.G * M_kg / (self.measurements.R500 * frac) * 1 / const.c**2).to(
             u.GeV
         )
 
@@ -168,7 +171,7 @@ class Cluster:
             * (self.baryon_temp - dm_temp)
             * rho_chi
             * self.rho_b
-            * self.volume
+            * self.measurements.volume
             * c(n)
             * uth ** (n + 1)
             * const.c.to(u.cm / u.s)

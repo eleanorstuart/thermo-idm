@@ -32,7 +32,7 @@ def fun(T_b, cluster, p0, f_chi=1, n=0): #TODO: update for radiative cooling
     bh_mass = cluster.bh_mass
     mu = cluster.mu
     m_b = cluster.m_b
-    nb = (2 * cluster.n_e).to(u.m ** (-3))
+    nb = (2 * cluster.measurements.n_e).to(u.m ** (-3))
     gamma = cluster.adiabatic_idx
     V = cluster.volume
     efficiency = cluster.epsilon

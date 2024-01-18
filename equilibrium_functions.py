@@ -17,7 +17,7 @@ def radiative_cooling_rate(T_b, cluster):
 def agn_heating_rate(T_b, cluster):
     with u.set_enabled_equivalencies(u.mass_energy()):
         return (cluster.epsilon * accretion_rate(T_b, cluster)).to(
-            u.GeV / u.s, equivalencies=u.temperature_energy())
+            u.erg / u.s, equivalencies=u.temperature_energy())
 
 def accretion_rate(T_b, cluster):
     with u.set_enabled_equivalencies(u.mass_energy()):
@@ -50,6 +50,7 @@ def dm_cooling_rate(T_b, cluster, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         
         )
     #conversion_factor = 0.197*1e-15 * (u.GeV * u.m)
+    #print("dm cooling rate", (numerator / denominator).to(u.erg/u.s))
     return (numerator / denominator).to(u.erg/u.s)
 
 def equil(logT_b, cluster, sig_0, m_chi, heating='effervescent'):

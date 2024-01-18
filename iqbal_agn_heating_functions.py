@@ -2,6 +2,7 @@ import numpy as np
 import sympy as sp
 
 from astropy import units as u
+from astropy import constants as const
 from scipy.integrate import quad
 from scipy.optimize import approx_fprime
 
@@ -21,7 +22,6 @@ def E(z): #ratio of the Hubble constant at redshift z to its present value
     return cosmo.H(z)/cosmo.H(0)
 
 def P500(measurements):
-    M500=measurements.M500.to(u.Msun)
     return ((1.65*1e-3*E(measurements.z)**(8/3)
             *(measurements.M500/(3*1e14*h70**(-1)*u.Msun))**2/3 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
@@ -42,7 +42,8 @@ def dP_dr(rad, measurements):
         rad = rad.value
     #rs = np.array(rad)
     #return np.gradient(r, Pg_r(r*u.Mpc, measurements))*u.erg/(u.cm**3 * u.Mpc)
-    return [approx_fprime(r, lambda x: Pg_r(x*u.Mpc, measurements)) for r in rad]*u.erg/(u.cm**3 * u.Mpc)
+    #print(rad)
+    return [approx_fprime(r, lambda x: Pg_r(x*u.Mpc, measurements))[0] for r in rad]*u.erg/(u.cm**3 * u.Mpc)
     
 def integrand(r, measurements, r0, rc):
     r=r*u.Mpc if isinstance(r, float) else r
@@ -64,7 +65,9 @@ def integrand(r, measurements, r0, rc):
     
 def q(measurements, r0, rc):
     rini=0.015*measurements.R500.to(u.Mpc).value
-    rmax=measurements.R500.to(u.Mpc).value
+    #rmax=measurements.R500.to(u.Mpc).value
+
+    rmax = virial_radius(1.25*measurements.M500, measurements.z).to(u.Mpc).value
     integral, _ = quad(lambda r: integrand(r, measurements, r0, rc), 
         rini, 
         rmax, )
@@ -95,7 +98,7 @@ def cooling_function(T):
 def vol_cooling_rate(n_e, T):
     mu_h=1.26
     mu_e=1.14
-    return (n_e**2 * cooling_function(T) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
+    return (np.multiply(np.power(n_e, 2), cooling_function(T)) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
 
 def overdensity(z):
     return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
@@ -109,3 +112,33 @@ def c_vir(Mvir, z):
 
 def scale_radius(Mvir, z):
     return (virial_radius(Mvir, z)/c_vir(Mvir, z)).to(u.Mpc)
+
+
+def T_g(r, measurements):
+    r=r*u.Mpc
+    mu=1
+    #print(Pg(r/measurements.R500, measurements))
+    #print(rho_g(r, measurements))
+    return (mu*const.m_p*Pg(r/measurements.R500, measurements)/rho_g(r, measurements)).to(u.GeV)
+
+def rho_g(r, measurements): # density profile of the baryons in the ICM
+    #print([dP_dr(r0, R500, M500, z) for r0 in r])
+    #dPdr=[dP_dr(r0, measurements) for r0 in r]
+    dPdr=dP_dr(r, measurements)
+    #print(dPdr)
+    #print(np.divide(dPdr,M_enc(r,measurements)))
+    return (-1*(r**2/(const.G*M_enc(r,measurements)))*(dPdr)*const.c**2).to(u.Msun/u.Mpc**3, equivalencies=u.mass_energy())
+
+def M_enc(r, measurements): #mass enclosed within radius r of an NFW profile
+    # pick scale density and radius (TODO: pick these better)
+    #r_s = 0.005 * u.Mpc
+    r_s = scale_radius(1.25*measurements.M500, measurements.z)
+    rho_s = calculate_density_normalization(r_s, measurements.M500, measurements.R500)#10**18 * u.Msun/(u.Mpc)**3
+    #r_s = r_s.value
+    
+    y = r/r_s
+    return ((4 * np.pi * r_s**3 * rho_s) * (np.log(1+y) - (y/(1+y)))).to(u.Msun)
+
+def calculate_density_normalization(r_s, M500, R500):
+    y=R500/r_s
+    return ((M500/(4*np.pi*r_s**3))*(np.log(1+y) - y/(1+y))**(-1)).to(u.Msun/u.Mpc**3)

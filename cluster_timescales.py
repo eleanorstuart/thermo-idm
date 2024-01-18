@@ -39,5 +39,6 @@ class ClusterTimescales: # TODO: figure out what to do with attributes that are 
         Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
         return (self.volume*Eff_int).to(u.erg/u.s)
 
-    def relaxation_time(self):
-        return
+    def relaxation_time(self, N, m): # N number of objects, m mass of object
+        t_cross = np.sqrt(self.measurements.R500**3/(const.G*N*m)).to(u.Gyr)
+        return N/(10*np.log(N)) * t_cross

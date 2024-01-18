@@ -32,17 +32,19 @@ def load_clusters(nrows=None, dataset='REFLEX'):
     }
 
     cls_table=QTable(cls_data, units=units)
-    
+
     with open ('data/'+dataset+'.p', 'rb') as fp:
         L_uncertainties=np.array(pickle.load(fp))
     L_uncertainties_conv=(L_uncertainties*1e37*u.W).to(u.erg / u.s).value
-    
+
+    n = nrows or len(L_uncertainties_conv)
+
     cluster_measurements = [ClusterMeasurements(
         cls_table['R500'][i], 
         cls_table['M500'][i],
         cls_table['z'][i],
         cls_table['L500'][i], 
-        T_var = variance(cls_table['L500'][i], L_uncertainties_conv[i])) for i in range(nrows)]
+        T_var = variance(cls_table['L500'][i], L_uncertainties_conv[i])) for i in range(n)]
 
     #return [Cluster(cm)for cm in cluster_measurements], [variance(cls_table['L500'][i], L_uncertainties_conv[i]) for i in range(nrows)] 
     return [Cluster(cm)for cm in cluster_measurements]

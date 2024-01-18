@@ -22,6 +22,8 @@ def temp_from_luminosity(luminosity):
     return T.to(u.GeV)
 
 
+
+
 #calculates predicted temperature based on equality with agn
 def fun(T_b, cluster, p0, f_chi=1, n=0): #TODO: update for radiative cooling
     T_b = T_b * u.GeV

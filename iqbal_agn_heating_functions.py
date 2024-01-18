@@ -82,7 +82,7 @@ def h(Linj, r, r0, rc, q):
 
 def vol_heating_rate(rs, measurements, Linj, rc):
     #x=r/measurements.R500
-    r0=(0.015*measurements.R500).to(u.cm)
+    r0=(0.015*measurements.R500).to(u.Mpc)
     return np.array([(h(Linj, r, r0, rc, q(measurements, r0, rc))
     *(Pg(r/measurements.R500,measurements))**((gamma_b-1)/gamma_b)
     *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
@@ -104,11 +104,12 @@ def overdensity(z):
     return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
 
 def virial_radius(Mvir, z):
-    return(Mvir/(4*np.pi/3 * overdensity(z) * cosmo.critical_density(z)))**(1/3)
+    return ((Mvir/(4*np.pi/3 * overdensity(z) * cosmo.critical_density(z)))**(1/3)).to(u.Mpc)
 
 def c_vir(Mvir, z):
     h=0.7 # TODO: set this properly
-    return (7.85*(Mvir/(2*1e12 * 0.7 * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
+    #print(z)
+    return (7.85*(Mvir/(2*1e12 * h * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
 
 def scale_radius(Mvir, z):
     return (virial_radius(Mvir, z)/c_vir(Mvir, z)).to(u.Mpc)
@@ -116,7 +117,7 @@ def scale_radius(Mvir, z):
 
 def T_g(r, measurements):
     r=r*u.Mpc
-    mu=1
+    mu=0.59
     #print(Pg(r/measurements.R500, measurements))
     #print(rho_g(r, measurements))
     return (mu*const.m_p*Pg(r/measurements.R500, measurements)/rho_g(r, measurements)).to(u.GeV)
@@ -132,13 +133,25 @@ def rho_g(r, measurements): # density profile of the baryons in the ICM
 def M_enc(r, measurements): #mass enclosed within radius r of an NFW profile
     # pick scale density and radius (TODO: pick these better)
     #r_s = 0.005 * u.Mpc
-    r_s = scale_radius(1.25*measurements.M500, measurements.z)
-    rho_s = calculate_density_normalization(r_s, measurements.M500, measurements.R500)#10**18 * u.Msun/(u.Mpc)**3
+
+    Mvir = 1.25*measurements.M500
+    r_s = scale_radius(Mvir, measurements.z)
+    Rvir = virial_radius(Mvir, measurements.z)
+    rho_s = calculate_density_normalization(r_s, Mvir, Rvir)#10**18 * u.Msun/(u.Mpc)**3
     #r_s = r_s.value
     
     y = r/r_s
     return ((4 * np.pi * r_s**3 * rho_s) * (np.log(1+y) - (y/(1+y)))).to(u.Msun)
 
-def calculate_density_normalization(r_s, M500, R500):
-    y=R500/r_s
-    return ((M500/(4*np.pi*r_s**3))*(np.log(1+y) - y/(1+y))**(-1)).to(u.Msun/u.Mpc**3)
+def calculate_density_normalization(r_s, Mvir, Rvir):
+    y=Rvir/r_s
+    return ((Mvir/(4*np.pi*r_s**3))*(np.log(1+y) - y/(1+y))**(-1)).to(u.Msun/u.Mpc**3)
+
+def rho_nfw(r, measurements):
+    Mvir = 1.25*measurements.M500
+    r_s = scale_radius(Mvir, measurements.z)
+    Rvir = virial_radius(Mvir, measurements.z)
+    rho_s = calculate_density_normalization(r_s, Mvir, Rvir)
+    y = r/r_s
+
+    return (rho_s / (y*(1+y)**2)).to(u.Msun/u.Mpc**3)

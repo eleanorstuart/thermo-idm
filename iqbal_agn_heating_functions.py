@@ -83,7 +83,8 @@ def h(Linj, r, r0, rc, q):
 def vol_heating_rate(rs, measurements, Linj, rc):
     #x=r/measurements.R500
     r0=(0.015*measurements.R500).to(u.Mpc)
-    return np.array([(h(Linj, r, r0, rc, q(measurements, r0, rc))
+    q0 = q(measurements, r0, rc)
+    return np.array([-1*(h(Linj, r, r0, rc, q0)
     *(Pg(r/measurements.R500,measurements))**((gamma_b-1)/gamma_b)
     *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
 
@@ -98,13 +99,18 @@ def cooling_function(T):
 def vol_cooling_rate(n_e, T):
     mu_h=1.26
     mu_e=1.14
-    return (np.multiply(np.power(n_e, 2), cooling_function(T)) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
+    return (np.multiply(n_e**2, cooling_function(T)) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
 
 def overdensity(z):
     return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
 
 def virial_radius(Mvir, z):
-    return ((Mvir/(4*np.pi/3 * overdensity(z) * cosmo.critical_density(z)))**(1/3)).to(u.Mpc)
+    print(Mvir, z)
+    print(overdensity(z))
+    #print(cosmo.critical_density(z).to(u.Msun * u.Mpc**-3))
+    #critical_density = cosmo.critical_density(z)
+    critical_density = (3*cosmo.H0**2/(8*np.pi*const.G)).to(u.Msun/u.Mpc**3)
+    return ((Mvir/(4*np.pi/3 * overdensity(z) * critical_density))**(1/3)).to(u.Mpc)
 
 def c_vir(Mvir, z):
     h=0.7 # TODO: set this properly

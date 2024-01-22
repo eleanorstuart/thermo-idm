@@ -5,14 +5,14 @@ from astropy import constants as const
 #from statistics_functions import chi_squared
 from cluster_functions import c
 
-def radiative_cooling_rate(T_b, cluster):
+def radiative_cooling_rate(T_b, measurements, n_e):
     prefactors=6.8*1e-42 *u.erg*u.cm**3
     Z=1
     T=T_b.to(u.K, equivalencies=u.temperature_energy())#self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
     T8=T/(1e8*u.K)
-    C=(prefactors*Z**2*(cluster.measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+    C=(prefactors*Z**2*(measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
     Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
-    return (cluster.measurements.volume*Eff_int).to(u.erg/u.s)
+    return (measurements.volume*Eff_int).to(u.erg/u.s)
 
 def agn_heating_rate(T_b, cluster):
     with u.set_enabled_equivalencies(u.mass_energy()):

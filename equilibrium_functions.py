@@ -10,7 +10,9 @@ def radiative_cooling_rate(T_b, measurements, n_e):
     Z=1
     T=T_b.to(u.K, equivalencies=u.temperature_energy())#self.baryon_temp.to(u.K, equivalencies=u.temperature_energy())
     T8=T/(1e8*u.K)
-    C=(prefactors*Z**2*(measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+
+    #C=(prefactors*Z**2*(measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+    C=(prefactors*Z**2*(n_e.to(u.cm**-3))**2)/(T8**(1/2))
     Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
     return (measurements.volume*Eff_int).to(u.erg/u.s)
 

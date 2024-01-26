@@ -28,8 +28,8 @@ def P500(measurements):
 
 def Pg(x, measurements): #x=r/r500
     return (P0*P500(measurements) #units keVcm-3
-           / ((c500*x)**gamma  #unitless
-              * (1+ (c500*x)**alpha)**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
+           / (np.power(c500*x,gamma)  #unitless
+              * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
 
 def Pg_r(r, measurements):
     if isinstance(r, float):
@@ -41,9 +41,10 @@ def dP_dr(rad, measurements):
         rad.to(u.Mpc)
         rad = rad.value
     #rs = np.array(rad)
-    #return np.gradient(r, Pg_r(r*u.Mpc, measurements))*u.erg/(u.cm**3 * u.Mpc)
+    #return np.gradient(rad, Pg_r(rad*u.Mpc, measurements))*u.erg/(u.cm**3 * u.Mpc)
     #print(rad)
-    return [approx_fprime(r, lambda x: Pg_r(x*u.Mpc, measurements))[0] for r in rad]*u.erg/(u.cm**3 * u.Mpc)
+    #return np.gradient(rad, Pg_r(rad*u.Mpc, measurements))
+    return [approx_fprime(r, lambda x: Pg_r(x*u.Mpc, measurements), epsilon=r*1e-8)[0] for r in rad]*u.erg/(u.cm**3 * u.Mpc)
     
 def integrand(r, measurements, r0, rc):
     r=r*u.Mpc if isinstance(r, float) else r
@@ -84,7 +85,7 @@ def vol_heating_rate(rs, measurements, Linj, rc):
     #x=r/measurements.R500
     r0=(0.015*measurements.R500).to(u.Mpc)
     q0 = q(measurements, r0, rc)
-    return np.array([-1*(h(Linj, r, r0, rc, q0)
+    return np.array([(h(Linj, r, r0, rc, q0)
     *(Pg(r/measurements.R500,measurements))**((gamma_b-1)/gamma_b)
     *(1/r)*(r/Pg(r/measurements.R500, measurements))*dP_dr([r.to(u.Mpc).value], measurements)).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
 
@@ -105,11 +106,14 @@ def overdensity(z):
     return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
 
 def virial_radius(Mvir, z):
-    print(Mvir, z)
-    print(overdensity(z))
+    #print(Mvir, z)
+    #print(overdensity(z))
     #print(cosmo.critical_density(z).to(u.Msun * u.Mpc**-3))
-    #critical_density = cosmo.critical_density(z)
-    critical_density = (3*cosmo.H0**2/(8*np.pi*const.G)).to(u.Msun/u.Mpc**3)
+    critical_density = cosmo.critical_density(z)
+    #print(critical_density.to(u.g/u.cm**3))
+    #print(z, cosmo.H(z))
+    critical_density = (3*cosmo.H(z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
+    #print(critical_density)
     return ((Mvir/(4*np.pi/3 * overdensity(z) * critical_density))**(1/3)).to(u.Mpc)
 
 def c_vir(Mvir, z):

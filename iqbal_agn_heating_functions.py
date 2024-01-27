@@ -22,8 +22,8 @@ def E(z): #ratio of the Hubble constant at redshift z to its present value
     return cosmo.H(z)/cosmo.H(0)
 
 def P500(measurements):
-    return ((1.65*1e-3*E(measurements.z)**(8/3)
-            *(measurements.M500/(3*1e14*h70**(-1)*u.Msun))**2/3 
+    return ((1.65*1e-3*E(measurements.z)**(8./3)
+            *(measurements.M500/(3*1e14*h70**(-1)*u.Msun))**2./3 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
 
 def Pg(x, measurements): #x=r/r500
@@ -119,7 +119,7 @@ def virial_radius(Mvir, z):
 def c_vir(Mvir, z):
     h=0.7 # TODO: set this properly
     #print(z)
-    return (7.85*(Mvir/(2*1e12 * h * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
+    return (7.85*(Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
 
 def scale_radius(Mvir, z):
     return (virial_radius(Mvir, z)/c_vir(Mvir, z)).to(u.Mpc)

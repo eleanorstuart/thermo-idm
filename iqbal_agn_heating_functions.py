@@ -1,5 +1,4 @@
 import numpy as np
-import sympy as sp
 
 from astropy import units as u
 from astropy import constants as const
@@ -106,19 +105,12 @@ def overdensity(z):
     return 18*np.pi**2 + 82*(cosmo.Om(z) - 1) - 39*(cosmo.Om(z) - 1)**2
 
 def virial_radius(Mvir, z):
-    #print(Mvir, z)
-    #print(overdensity(z))
-    #print(cosmo.critical_density(z).to(u.Msun * u.Mpc**-3))
-    critical_density = cosmo.critical_density(z)
-    #print(critical_density.to(u.g/u.cm**3))
-    #print(z, cosmo.H(z))
+    critical_density = cosmo.critical_density(z) #weirdly producing incorrect results
     critical_density = (3*cosmo.H(z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
-    #print(critical_density)
     return ((Mvir/(4*np.pi/3 * overdensity(z) * critical_density))**(1/3)).to(u.Mpc)
 
 def c_vir(Mvir, z):
     h=0.7 # TODO: set this properly
-    #print(z)
     return (7.85*(Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+z)**(-0.71)).to(1)
 
 def scale_radius(Mvir, z):
@@ -156,6 +148,7 @@ def M_enc(r, measurements): #mass enclosed within radius r of an NFW profile
 def calculate_density_normalization(r_s, Mvir, Rvir):
     y=Rvir/r_s
     return ((Mvir/(4*np.pi*r_s**3))*(np.log(1+y) - y/(1+y))**(-1)).to(u.Msun/u.Mpc**3)
+
 
 def rho_nfw(r, measurements):
     Mvir = 1.25*measurements.M500

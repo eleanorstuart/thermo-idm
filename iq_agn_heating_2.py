@@ -2,7 +2,7 @@ import numpy as np
 
 from astropy import units as u
 from astropy import constants as const
-from scipy.integrate import quad
+from scipy.integrate import quad, trapezoid
 from scipy.optimize import approx_fprime, brentq
 
 from astropy.cosmology import FlatLambdaCDM
@@ -65,7 +65,7 @@ class NFWProfile():
         return ((4 * np.pi * self.rs**3 * self.rho_s()) * (np.log(1+y) - (y/(1+y)))).to(u.Msun)
 
     def get_R500(self):
-        rho_avg = lambda x: self.M_enc(x).value/(4/3*np.pi * x**3) - 500*(self.rho_c()).to(u.Msun/u.Mpc**3).value
+        rho_avg = lambda x: self.M_enc(x).value/(4./3.*np.pi * x**3) - 500*(self.rho_c()).to(u.Msun/u.Mpc**3).value
         r500 = brentq(rho_avg, 0.1*self.Rvir.value, self.Rvir.value)
         return r500*u.Mpc
 
@@ -75,17 +75,26 @@ class NFWProfile():
             *(self.M500/(3*1e14*h70**(-1)*u.Msun))**2./3. 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
 
+    def P500_planelles(self):
+        omega_m =0.24
+        omega_lambda = 1-omega_m
+        h_p = 72./100.
+        Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
+        
+        return (1.45*1e-11*u.erg/u.cm**3 * (self.M500/(1e15*h_p*u.Msun))**(2./3.)*Ez**(8./3.))
+
+    
     def Pg(self, x): #x=r/r500
-        return (P0*self.P500() 
+        return (P0*self.P500_planelles() 
            / (np.power(c500*x,gamma) 
               * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
 
-    def Pg_r(self, r):
+    def Pg_r(self, r): 
         if isinstance(r, float):
             r = r*u.Mpc
         return self.Pg(r/self.R500).value
 
-    def dP_dr(self, rad):
+    def dP_dr(self, rad): # rad has to be a list of rs in Mpc
         if isinstance(rad, u.Quantity):
             rad.to(u.Mpc)
             rad = rad.value
@@ -104,11 +113,22 @@ class NFWProfile():
     # effervescent heating 
     def vol_heating_rate(self, rs, Linj, rc):
         r0=(0.015*self.R500).to(u.Mpc)
+        q_factor = self.q(r0, rc)
 
-        return np.array([(self.h(Linj, r, r0, rc)
+        return np.array([(self.h(Linj, r, r0, rc, q_factor)
             *(self.Pg(r/self.R500))**((gamma_b-1)/gamma_b)
             *(1/r)
             *(r/self.Pg(r/self.R500))*self.dP_dr([r.to(u.Mpc).value])).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
+
+    def total_heating_rate(self, rmin, rmax, Linj, rc, n=50): # rmin, rmax, rc given in Mpc
+        log_rmin = np.log10(rmin.value)
+        log_rmax = np.log10(rmax.value)
+        rs = np.logspace(log_rmin, log_rmax, num=n)*u.Mpc
+        integrand = (4 * np.pi * np.multiply(
+            self.vol_heating_rate(rs, Linj, rc).to(u.erg/(u.s*u.Mpc**3)), 
+            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
+        return trapezoid(integrand, rs)
+
 
     def q(self, r0, rc):
         rini=r0.value # IS THIS TRUE?
@@ -130,17 +150,26 @@ class NFWProfile():
                *(np.exp(-1*r/rc)).to(1))
         return intgrd.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
 
-    def h(self, Linj, r, r0, rc):
+    def h(self, Linj, r, r0, rc, q):
         return (Linj/(4*np.pi*r**2)
             *(1-np.exp(-1*r/r0))
             *np.exp(-1*r/rc)
-            *(1/self.q(r0, rc)))
+            *(1/q))
 
     # radiative cooling rate
     def vol_cooling_rate(self, r):
         mu_h=1.26
         mu_e=1.14
         return (np.multiply(self.n_e(r)**2, self.cooling_function(r)) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
+
+    def total_cooling_rate(self, rmin, rmax, n=50):
+        log_rmin = np.log10(rmin.value)
+        log_rmax = np.log10(rmax.value)
+        rs = np.logspace(log_rmin, log_rmax, num=n)*u.Mpc
+        integrand = (4 * np.pi * np.multiply(
+            self.vol_cooling_rate(rs).to(u.erg/(u.s*u.Mpc**3)), 
+            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
+        return trapezoid(integrand, rs)
 
     def cooling_function(self, r):
         alpha=-1.7

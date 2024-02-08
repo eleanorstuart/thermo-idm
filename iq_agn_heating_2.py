@@ -181,3 +181,7 @@ class NFWProfile():
 
     def n_e(self, r):
         return np.sqrt(0.704)*(self.rho_g(r)/const.m_p).to(u.Mpc**-3)
+
+    def rho_tot(self, r):
+        y = r/self.rs
+        return (self.rho_s()/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)

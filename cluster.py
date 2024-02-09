@@ -10,6 +10,7 @@ from cluster_functions import *
 from iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
 from cluster_measurements import ClusterMeasurements
+from iq_agn_heating_2 import NFWProfile
 
 
 
@@ -48,11 +49,6 @@ class Cluster:
 
     def __post_init__(self):
         # General - read from data
-
-        #self.measurements=ClusterData(self.radius, self.mass, self.z, self.L500)
-
-        #self.mass = self.mass.to(u.GeV)  # total mass
-        
         self.rho_tot = (self.measurements.M500 / self.measurements.volume).to(u.GeV / u.cm**3)  # total density
         self.rho_b = self.rho_tot * self.measurements.fb  # baryon density
         self.rho_dm = self.rho_tot * self.fdm  # DM density
@@ -63,9 +59,6 @@ class Cluster:
             self.baryon_temp = temp_from_luminosity(self.measurements.L500)
         else:
             raise ValueError("Must provide a velocity dispersion or luminosity")
-
-        # radiative cooling params
-        #self.n_e = self.rho_b / self.m_b  # number density of electrons
 
         # setup AGN heating
         if self.bh_mass is None:
@@ -78,6 +71,7 @@ class Cluster:
             self.eff_agn_heating_rate=self.get_effervescent_agn_heating_rate(rc_factor)
 
         self.timescales=ClusterTimescales(self.measurements)
+        self.nfw = NFWProfile(M500 = self.M500)
 
         
 

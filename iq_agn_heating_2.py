@@ -5,6 +5,8 @@ from astropy import constants as const
 from scipy.integrate import quad, trapezoid
 from scipy.optimize import approx_fprime, brentq
 
+from cluster_functions import c
+
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
 
@@ -20,22 +22,26 @@ gamma_b=4./3.
 
 # nfw profile class
 class NFWProfile():
-    def __init__(self, Mvir, z):
-        self.Mvir = Mvir
+    def __init__(self, z, Mvir=None, M500=None):
+        if Mvir:
+            self.Mvir = Mvir
+
+        elif M500: 
+            self.M500 = M500
+            # calculate Mvir
         self.z = z
 
         self.Rvir = self.get_virial_radius()
         self.cvir = self.get_concentration_param()
-        self.rs = self.get_scale_radius()
+        self.rs = (self.Rvir/self.cvir).to(u.Mpc)
 
         self.R500 = self.get_R500()
-        self.M500 = self.M_enc(self.R500)
+        if not M500:
+            self.M500 = self.M_enc(self.R500)
+        
 
 
     # cosmology functions (only depend on redshift)
-    def E(self):
-        return cosmo.H(self.z)/cosmo.H0
-
     def overdensity_const(self):
         return 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
 
@@ -49,14 +55,9 @@ class NFWProfile():
     def get_concentration_param(self):
         return (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
 
-    def get_scale_radius(self):
-        return (self.Rvir/self.cvir).to(u.Mpc)
-
-    def delta_cvir(self):
-        return self.overdensity_const()/3 * self.cvir**3 / (np.log(1+self.cvir) - self.cvir/(1+self.cvir))
-
     def rho_s(self):
-        return (self.delta_cvir()*self.rho_c()).to(u.Msun/u.Mpc**3)
+        delta_cvir = self.overdensity_const()/3 * self.cvir**3 / (np.log(1+self.cvir) - self.cvir/(1+self.cvir))
+        return (delta_cvir()*self.rho_c()).to(u.Msun/u.Mpc**3)
 
     def M_enc(self, r):
         if isinstance(r, float):
@@ -71,7 +72,8 @@ class NFWProfile():
 
     # pressure
     def P500(self):
-        return ((1.65*1e-3*self.E()**(8./3.)
+        Ez = cosmo.H(self.z)/cosmo.H0 
+        return ((1.65*1e-3*Ez**(8./3.)
             *(self.M500/(3*1e14*h70**(-1)*u.Msun))**2./3. 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
 
@@ -80,10 +82,9 @@ class NFWProfile():
         omega_lambda = 1-omega_m
         h_p = 72./100.
         Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
-        
-        return (1.45*1e-11*u.erg/u.cm**3 * (self.M500/(1e15*h_p*u.Msun))**(2./3.)*Ez**(8./3.))
+        # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
+        return (1.45*1e-11*u.erg/u.cm**3 * (self.M500/(1e15*h_p**(-1)*u.Msun))**(2./3.)*Ez**(8./3.))
 
-    
     def Pg(self, x): #x=r/r500
         return (P0*self.P500_planelles() 
            / (np.power(c500*x,gamma) 
@@ -111,11 +112,11 @@ class NFWProfile():
         return (mu*const.m_p*self.Pg(r/self.R500)/self.rho_g(r)).to(u.GeV)
 
     # effervescent heating 
-    def vol_heating_rate(self, rs, Linj, rc):
+    def vol_heating_rate(self, rs, rc):
         r0=(0.015*self.R500).to(u.Mpc)
         q_factor = self.q(r0, rc)
-
-        return np.array([(self.h(Linj, r, r0, rc, q_factor)
+        L = self.Linj(rc)
+        return np.array([(self.h(L, r, r0, rc, q_factor)
             *(self.Pg(r/self.R500))**((gamma_b-1)/gamma_b)
             *(1/r)
             *(r/self.Pg(r/self.R500))*self.dP_dr([r.to(u.Mpc).value])).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
@@ -128,7 +129,6 @@ class NFWProfile():
             self.vol_heating_rate(rs, Linj, rc).to(u.erg/(u.s*u.Mpc**3)), 
             np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
         return trapezoid(integrand, rs)
-
 
     def q(self, r0, rc):
         rini=r0.value # IS THIS TRUE?
@@ -155,6 +155,13 @@ class NFWProfile():
             *(1-np.exp(-1*r/r0))
             *np.exp(-1*r/rc)
             *(1/q))
+
+    def Linj(self, rc):
+        if rc == 0.3*self.R500:
+            logLinj = -0.96 + 1.73*np.log10(self.Mvir/(1e14 * u.Msun))
+        elif rc == 0.1*self.R500:
+            logLinj = -1.58 + 1.53*np.log10(self.Mvir/(1e14 * u.Msun))
+        return np.power(10, logLinj) * 1e45 * u.erg/u.s
 
     # radiative cooling rate
     def vol_cooling_rate(self, r):
@@ -185,3 +192,41 @@ class NFWProfile():
     def rho_tot(self, r):
         y = r/self.rs
         return (self.rho_s()/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)
+
+    # DM cooling
+    def virial_temperature(self, r, m_chi, f_chi=1, m_psi=0.1 * u.GeV,):
+        M = self.M_enc(r)
+        frac = f_chi / m_chi + (1 - f_chi) / m_psi
+        M_kg = M.to(u.kg, equivalencies=u.mass_energy())
+        return (0.3 * const.G * M_kg / (r * frac) * 1 / const.c**2).to(u.GeV)
+
+    def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
+        T_b = self.T_g(r.value)
+        T_chi = self.virial_temperature(r, m_chi)
+        with u.set_enabled_equivalencies(u.mass_energy()):
+            uth = np.sqrt(T_b / const.m_p.to(u.GeV) + T_chi / m_chi).to(1)
+        rho_chi = self.rho_tot(r) * f_chi
+
+        denominator = ((m_chi + const.m_p) ** 2).to(u.GeV**2)
+        numerator = (
+                3
+                * (T_b - T_chi).to(u.erg)
+                * rho_chi.to(u.GeV/u.cm**3)
+                * self.rho_g.to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
+                * c(n)
+                * uth ** (n + 1)
+                * (const.c.to(u.cm / u.s))
+                * s0
+        
+            )
+        return (numerator / denominator).to(u.erg/(u.s*u.cm**3))
+
+    def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
+        log_rmin = np.log10(rmin.value)
+        log_rmax = np.log10(rmax.value)
+        rs = np.logspace(log_rmin, log_rmax, num=num)*u.Mpc
+    
+        integrand = (4 * np.pi * np.multiply(
+            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.Mpc**3)), 
+            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
+        return trapezoid(integrand, rs)

@@ -22,20 +22,25 @@ gamma_b=4./3.
 
 # nfw profile class
 class NFWProfile():
-    def __init__(self, z, Mvir=None, M500=None):
+    def __init__(self, z, Mvir=None, M500=None, R500=None):
+        self.z = z
         if Mvir:
             self.Mvir = Mvir
+            self.cvir = self.get_cvir()
+            self.Rvir = self.get_virial_radius()
+            self.rs = (self.Rvir/self.cvir).to(u.Mpc)
+            self.rho_s = self.get_rho_s(self.overdensity_const(), self.cvir)
         elif M500: 
             self.M500 = M500
-            # TODO: calculate Mvir from M500 and c500
-        self.z = z
+            self.c500 = self.get_c500()
+            self.rs = (self.R500/self.c500).to(u.Mpc)
+            self.rho_s = self.get_rho_s(500., self.c500)
+            self.Rvir = self.get_R_from_overdensity(self.overdensity_const)
+            self.Mvir = self.M_enc(self.Rvir)
 
-        self.Rvir = self.get_virial_radius()
-        self.cvir = self.get_concentration_param()
-        self.rs = (self.Rvir/self.cvir).to(u.Mpc)
+        self.R500 = R500 or self.get_R_from_overdensity(500.)
 
-        self.R500 = self.get_R500()
-        if not M500:
+        if not self.M500:
             self.M500 = self.M_enc(self.R500)
         
 
@@ -51,30 +56,31 @@ class NFWProfile():
     def get_virial_radius(self):
         return ((self.Mvir/(4*np.pi/3 * self.overdensity_const() * self.rho_c()))**(1/3)).to(u.Mpc)
 
-    def get_concentration_param(self):
+    def get_cvir(self):
         return (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
 
-    def get_c200(self): # to be used as an approximation for c500 TODO: put in correct constants
-        return (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
+    def get_c500(self): # with Duffy 2008 c200 params to be used as an approximation for c500 
+        return (5.71*(self.M500/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
 
-    def rho_s(self):
-        delta_cvir = self.overdensity_const()/3 * self.cvir**3 / (np.log(1+self.cvir) - self.cvir/(1+self.cvir))
-        return (delta_cvir*self.rho_c()).to(u.Msun/u.Mpc**3)
+    def get_rho_s(self, overdensity, concentration):
+        delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
+        return (delta_c*self.rho_c()).to(u.Msun/u.Mpc**3)
 
     def M_enc(self, r):
         if isinstance(r, float):
             r=r*u.Mpc
         y = r/self.rs
-        return ((4 * np.pi * self.rs**3 * self.rho_s()) * (np.log(1+y) - (y/(1+y)))).to(u.Msun)
+        return ((4 * np.pi * self.rs**3 * self.rho_s) * (np.log(1+y) - (y/(1+y)))).to(u.Msun)
 
-    def get_R500(self):
-        rho_avg = lambda x: self.M_enc(x).value/(4./3.*np.pi * x**3) - 500*(self.rho_c()).to(u.Msun/u.Mpc**3).value
-        r500 = brentq(rho_avg, 0.1*self.Rvir.value, self.Rvir.value)
-        return r500*u.Mpc
+    def get_R_from_overdensity(self, overdensity):
+        rho_avg = lambda x: self.M_enc(x).value/(4./3.*np.pi * x**3) - overdensity*(self.rho_c()).to(u.Msun/u.Mpc**3).value
+        r = brentq(rho_avg, 0.1, 10) # search between 0.1 and 10 Mpc
+        return r*u.Mpc
 
     def rho_tot(self, r):
         y = r/self.rs
         return (self.rho_s()/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)
+    
 
     # pressure
     def P500(self):

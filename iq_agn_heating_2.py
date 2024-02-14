@@ -25,10 +25,9 @@ class NFWProfile():
     def __init__(self, z, Mvir=None, M500=None):
         if Mvir:
             self.Mvir = Mvir
-
         elif M500: 
             self.M500 = M500
-            # calculate Mvir
+            # TODO: calculate Mvir from M500 and c500
         self.z = z
 
         self.Rvir = self.get_virial_radius()
@@ -55,9 +54,12 @@ class NFWProfile():
     def get_concentration_param(self):
         return (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
 
+    def get_c200(self): # to be used as an approximation for c500 TODO: put in correct constants
+        return (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
+
     def rho_s(self):
         delta_cvir = self.overdensity_const()/3 * self.cvir**3 / (np.log(1+self.cvir) - self.cvir/(1+self.cvir))
-        return (delta_cvir()*self.rho_c()).to(u.Msun/u.Mpc**3)
+        return (delta_cvir*self.rho_c()).to(u.Msun/u.Mpc**3)
 
     def M_enc(self, r):
         if isinstance(r, float):
@@ -69,6 +71,10 @@ class NFWProfile():
         rho_avg = lambda x: self.M_enc(x).value/(4./3.*np.pi * x**3) - 500*(self.rho_c()).to(u.Msun/u.Mpc**3).value
         r500 = brentq(rho_avg, 0.1*self.Rvir.value, self.Rvir.value)
         return r500*u.Mpc
+
+    def rho_tot(self, r):
+        y = r/self.rs
+        return (self.rho_s()/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)
 
     # pressure
     def P500(self):
@@ -86,7 +92,7 @@ class NFWProfile():
         return (1.45*1e-11*u.erg/u.cm**3 * (self.M500/(1e15*h_p**(-1)*u.Msun))**(2./3.)*Ez**(8./3.))
 
     def Pg(self, x): #x=r/r500
-        return (P0*self.P500_planelles() 
+        return (P0*self.P500_planelles() # switch out for P500()
            / (np.power(c500*x,gamma) 
               * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
 
@@ -112,10 +118,10 @@ class NFWProfile():
         return (mu*const.m_p*self.Pg(r/self.R500)/self.rho_g(r)).to(u.GeV)
 
     # effervescent heating 
-    def vol_heating_rate(self, rs, rc):
+    def vol_heating_rate(self, rs, rc, Linj=None):
         r0=(0.015*self.R500).to(u.Mpc)
         q_factor = self.q(r0, rc)
-        L = self.Linj(rc)
+        L = Linj or self.Linj(rc)
         return np.array([(self.h(L, r, r0, rc, q_factor)
             *(self.Pg(r/self.R500))**((gamma_b-1)/gamma_b)
             *(1/r)
@@ -188,10 +194,6 @@ class NFWProfile():
 
     def n_e(self, r):
         return np.sqrt(0.704)*(self.rho_g(r)/const.m_p).to(u.Mpc**-3)
-
-    def rho_tot(self, r):
-        y = r/self.rs
-        return (self.rho_s()/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)
 
     # DM cooling
     def virial_temperature(self, r, m_chi, f_chi=1, m_psi=0.1 * u.GeV,):

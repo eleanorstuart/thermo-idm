@@ -28,11 +28,11 @@ def load_clusters(nrows=None, dataset='REFLEX'):
 
     cls_table=QTable(cls_data, units=units)
 
-    with open ('data/'+dataset+'.p', 'rb') as fp:
-        L_uncertainties=np.array(pickle.load(fp))
-    L_uncertainties_conv=(L_uncertainties*1e37*u.W).to(u.erg / u.s).value
+    #with open ('data/'+dataset+'.p', 'rb') as fp:
+    #    L_uncertainties=np.array(pickle.load(fp))
+    #L_uncertainties_conv=(L_uncertainties*1e37*u.W).to(u.erg / u.s).value
 
-    n = nrows or len(L_uncertainties_conv)
+    n = nrows #or len(L_uncertainties_conv)
 
     return [
         NFWProfile(

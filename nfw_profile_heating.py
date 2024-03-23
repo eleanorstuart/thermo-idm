@@ -22,7 +22,7 @@ gamma_b=4./3.
 
 # nfw profile class
 class NFWProfile():
-    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None):
+    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_uncertainty=None):
         self.z = z
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
@@ -35,6 +35,7 @@ class NFWProfile():
             self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
         elif M500: 
             self.M500 = M500
+            self.M500.uncertainty = M500_uncertainty
             # with Duffy 2008 c200 params to be used as an approximation for c500 
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
             self.R500 = R500 or self.get_R500()
@@ -179,6 +180,19 @@ class NFWProfile():
         Mbh = np.power(10, logMbh)*u.Msun
         return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)*u.Msun))
 
+    # gaspari agn heating
+    def get_Mbh(self, L=None):
+        L500 = L or self.L500
+        logMbh = 10+0.38*np.log10(L500/(1e44*u.erg/u.s))
+        return np.power(10, logMbh)*u.Msun
+
+    def plasma_entropy(self, r):
+        adiabatic_idx = 5. / 3.
+        baryon_number_density = (2 * self.n_e(r)).to(u.m ** (-3))
+        return (
+            const.k_B * self.T_g(r.to(u.Mpc).value).to(u.K, equivalencies=u.temperature_energy())
+        ).to(u.GeV) / baryon_number_density ** (adiabatic_idx - 1)    
+
     # radiative cooling rate
     def vol_cooling_rate(self, r):
         mu_h=1.26
@@ -282,13 +296,30 @@ class NFWProfile():
 
     # for MCMC
     def solve_for_L500(self, s0, mx):
-        rmin = 0.015*self.R500
+        rmin = 0.001*self.R500
         rmax = self.R500
         net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.total_cooling_rate(rmin, rmax)).to(u.erg/u.s)
         rc = 0.1*self.R500
         # logL = log(L500/(erg/s))
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
+
+    def L500_analytic(self, s0, mx):
+        rmin = 0.001*self.R500
+        rmax = self.R500
+        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.total_cooling_rate(rmin, rmax)).to(u.erg/u.s)
+        rc = 0.1*self.R500
+        agn_heating_without_Linj = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)
+        Linj = net_cool/agn_heating_without_Linj # in erg/s
+        Mbh = Linj/10**(34.5) # in Msun
+        logL500 = (np.log10(Mbh)-10)/0.38
+        return np.power(10, logL500) * 1e44 *u.erg/u.s
+
+    def h_no_L(self, r, r0, rc, q):
+        return (1/(4*np.pi*r**2)
+            *(1-np.exp(-1*r/r0))
+            *np.exp(-1*r/rc)
+            *(1/q))
 
 
 

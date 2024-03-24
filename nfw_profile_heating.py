@@ -2,10 +2,12 @@ import numpy as np
 
 from astropy import units as u
 from astropy import constants as const
+from astropy.nddata import NDData, NDDataRef
 from scipy.integrate import quad, trapezoid
 from scipy.optimize import approx_fprime, brentq
 
 from cluster_functions import c
+from astropy_error_prop_functions import power_nddata, convert_nddata, log_nddata
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -34,28 +36,45 @@ class NFWProfile():
             self.rs = (self.Rvir/self.cvir).to(u.Mpc)
             self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
         elif M500: 
-            self.M500 = M500
-            self.M500.uncertainty = M500_uncertainty
+            #print('INSIDE M500')
+            self.M500 = NDDataRef(data=M500, uncertainty=M500_uncertainty)
+            #print(self.M500, self.M500.uncertainty)
+            #calc_test = self.M500.multiply(2)
+            #print(calc_test, calc_test.uncertainty)
+            #self.M500.uncertainty = M500_uncertainty
             # with Duffy 2008 c200 params to be used as an approximation for c500 
-            self.c500 = (5.71*(self.M500/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
+            #self.c500 = (5.71*(self.M500.divide(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
+            self.c500 = (power_nddata(self.M500.divide(2*1e12 * h**-1 * u.Msun), -0.084).multiply(5.71).multiply( (1+self.z)**(-0.47)))#.to(1)
+            old_c500 = (5.71*(self.M500.data *u.Msun/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
+            #print('c500 compare:', self.c500, old_c500)
+
             self.R500 = R500 or self.get_R500()
-            self.rs = (self.R500/self.c500).to(u.Mpc)
+            #print(self.R500)
+            #print(self.M500.data)
+            old_R500 = ((self.M500.data*1e14*u.Msun/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
+            #print('R500 compare:', self.R500, old_R500)
+
+            self.rs = convert_nddata(self.R500.divide(self.c500), u.Mpc)
             self.rho_s = self.get_rho_s(500., self.c500)
-            self.Rvir = self.get_R_from_overdensity(self.overdensity_const)
-            self.Mvir = self.M_enc(self.Rvir)
+
+            #self.Rvir = self.get_R_from_overdensity(self.overdensity_const)
+            #self.Mvir = self.M_enc(self.Rvir)
         else:
             raise ValueError("Provide Mvir or M500")
 
         if not M500:
             self.M500 = self.M_enc(self.R500)
-        if not R500:
+        if not self.R500:
             self.R500 = self.get_R_from_overdensity(500.)
         
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):
-        delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
-        return (delta_c*self.rho_c).to(u.Msun/u.Mpc**3)
+        #delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
+        delta_c =  power_nddata(concentration, 3).multiply(overdensity/3).divide(
+            (log_nddata(concentration.add(1)).subtract(concentration.divide(concentration.add(1)))))
+        #print(delta_c)
+        return convert_nddata(delta_c.multiply(self.rho_c),(u.Msun/u.Mpc**3))
 
     def M_enc(self, r):
         if isinstance(r, float):
@@ -71,7 +90,10 @@ class NFWProfile():
     def get_R500(self):
         #rho_avg = lambda x: self.M500.value/(4./3.*np.pi * x**3) - 500*(self.rho_c).to(u.Msun/u.Mpc**3).value
         #r = brentq(rho_avg, 0.1, 10) # search between 0.1 and 10 Mpc
-        return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
+        #return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
+        #print(self.M500.divide(4*np.pi/3 * 500. * self.rho_c))
+        #print(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)))
+        return convert_nddata(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)), u.Mpc)
 
     def rho_tot(self, r):
         y = r/self.rs
@@ -140,7 +162,8 @@ class NFWProfile():
 
     def q(self, r0, rc):
         rini=r0.value # IS THIS TRUE?
-        rmax = self.Rvir.to(u.Mpc).value
+        #rmax = self.Rvir.to(u.Mpc).value
+        rmax = 2*self.R500.to(u.Mpc).value # TODO: decide on rmax
         integral, _ = quad(lambda r: self.integrand(r, r0, rc), 
             rini, 
             rmax)

@@ -37,24 +37,29 @@ class NFWProfile():
             self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
         elif M500: 
             #print('INSIDE M500')
-            self.M500 = NDDataRef(data=M500, uncertainty=M500_uncertainty)
+            #self.M500 = NDDataRef(data=M500, uncertainty=M500_uncertainty)
+            self.M500=M500
             #print(self.M500, self.M500.uncertainty)
             #calc_test = self.M500.multiply(2)
             #print(calc_test, calc_test.uncertainty)
             #self.M500.uncertainty = M500_uncertainty
             # with Duffy 2008 c200 params to be used as an approximation for c500 
             #self.c500 = (5.71*(self.M500.divide(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
-            self.c500 = (power_nddata(self.M500.divide(2*1e12 * h**-1 * u.Msun), -0.084).multiply(5.71).multiply( (1+self.z)**(-0.47)))#.to(1)
-            old_c500 = (5.71*(self.M500.data *u.Msun/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
+            #self.c500 = (power_nddata(self.M500.divide(2*1e12 * h**-1 * u.Msun), -0.084).multiply(5.71).multiply( (1+self.z)**(-0.47)))#.to(1)
+            self.c500 = (5.71*(self.M500/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
             #print('c500 compare:', self.c500, old_c500)
-
+            #if self.c500.data != old_c500:
+            #    raise ValueError("c500 calculated with uncertainties is not equal to previous c500")
             self.R500 = R500 or self.get_R500()
             #print(self.R500)
             #print(self.M500.data)
-            old_R500 = ((self.M500.data*1e14*u.Msun/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
+            self.R500 = ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
             #print('R500 compare:', self.R500, old_R500)
-
-            self.rs = convert_nddata(self.R500.divide(self.c500), u.Mpc)
+            #if np.abs(self.R500.data - old_R500.value) > 1e-5:
+            #    print(self.R500.data,old_R500.value )
+            #    raise ValueError("R500 calculated with uncertainties is not equal to previous R500")
+            #self.rs = convert_nddata(self.R500.divide(self.c500), u.Mpc)
+            self.rs = self.R500/self.c500
             self.rho_s = self.get_rho_s(500., self.c500)
 
             #self.Rvir = self.get_R_from_overdensity(self.overdensity_const)
@@ -70,11 +75,12 @@ class NFWProfile():
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):
-        #delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
-        delta_c =  power_nddata(concentration, 3).multiply(overdensity/3).divide(
-            (log_nddata(concentration.add(1)).subtract(concentration.divide(concentration.add(1)))))
+        delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
+        return (delta_c*self.rho_c).to(u.Msun/u.Mpc**3)
+        #delta_c =  power_nddata(concentration, 3).multiply(overdensity/3).divide(
+        #    (log_nddata(concentration.add(1)).subtract(concentration.divide(concentration.add(1)))))
         #print(delta_c)
-        return convert_nddata(delta_c.multiply(self.rho_c),(u.Msun/u.Mpc**3))
+        #return convert_nddata(delta_c.multiply(self.rho_c),(u.Msun/u.Mpc**3))
 
     def M_enc(self, r):
         if isinstance(r, float):
@@ -90,10 +96,10 @@ class NFWProfile():
     def get_R500(self):
         #rho_avg = lambda x: self.M500.value/(4./3.*np.pi * x**3) - 500*(self.rho_c).to(u.Msun/u.Mpc**3).value
         #r = brentq(rho_avg, 0.1, 10) # search between 0.1 and 10 Mpc
-        #return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
+        return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
         #print(self.M500.divide(4*np.pi/3 * 500. * self.rho_c))
         #print(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)))
-        return convert_nddata(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)), u.Mpc)
+        #return convert_nddata(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)), u.Mpc)
 
     def rho_tot(self, r):
         y = r/self.rs
@@ -107,18 +113,48 @@ class NFWProfile():
             *(self.M500/(3*1e14*h70**(-1)*u.Msun))**2./3. 
             *h70**2 * u.keV * u.cm**-3)).to(u.erg/u.cm**3, equivalencies=u.mass_energy()) 
 
-    def P500_planelles(self):
+    def P500_planelles_incorrect_error(self):
         omega_m =0.24
         omega_lambda = 1-omega_m
         h_p = 72./100.
         Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
         # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
-        return (1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3 * (self.M500/(1e15*h_p**(-1)*u.Msun))**(2./3.)*Ez**(8./3.))
+        return convert_nddata(
+            power_nddata(
+                self.M500.divide(1e15*h_p**(-1)*u.Msun),
+                 (2./3.)
+                 ).multiply((1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3) *Ez**(8./3.)), u.erg/u.cm**3)
 
+    def P500_planelles(self): #uses old method to compute P500
+        M500 = self.M500.data*self.M500.unit
+        omega_m =0.24
+        omega_lambda = 1-omega_m
+        h_p = 72./100.
+        Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
+        # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
+        return (1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3 * (M500/(1e15*h_p**(-1)*u.Msun))**(2./3.)*Ez**(8./3.)).to(u.erg/u.cm**3)
+
+    def Pg_incorrect_error_prop(self, x): #x=r/r500
+        if isinstance(x, float):
+            return convert_nddata((self.P500_planelles().multiply(P0)).divide(
+                np.power(c500*x,gamma) * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha)), u.erg/u.cm**3)
+        elif isinstance(x, NDDataRef):
+            return
+        else:
+            print(type(x))
+            raise ValueError('invalid x')
+    
     def Pg(self, x): #x=r/r500
-        return (P0*self.P500_planelles() # switch out for P500()
+        P500 = self.P500_planelles().data*self.P500_planelles().unit
+        return (P0*P500 # switch out for P500()
            / (np.power(c500*x,gamma) 
               * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))).to(u.erg/u.cm**3, equivalencies=u.mass_energy())
+
+    def Pg_r_incorrect_err(self, r): 
+        if isinstance(r, float):
+            r = r*u.Mpc
+        x = convert_nddata(power_nddata(self.R500, -1).multiply(r), 1)
+        return self.Pg(x).value
 
     def Pg_r(self, r): 
         if isinstance(r, float):

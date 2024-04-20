@@ -1,4 +1,5 @@
 from astropy.nddata import NDData, NDDataRef, StdDevUncertainty
+from astropy import units as u
 import uncertainties as unc
 #from uncertainties import unumpy as unp
 import uncertainties.umath as umath
@@ -31,14 +32,14 @@ def power_nddata(nddata_ref, power):
 
 def convert_nddata(nddata_ref, unit):
     #print('DATA, UNIT', nddata_ref.data, nddata_ref.unit)
-    conversion_factor = (nddata_ref.unit/unit).to(1)
+    conversion_factor = (nddata_ref.unit/unit).to(1, equivalencies=u.mass_energy())
     new_data = nddata_ref.data * conversion_factor
     new_uncertainty = nddata_ref.uncertainty.array * conversion_factor
 
     return NDDataRef(data=new_data, uncertainty=StdDevUncertainty(new_uncertainty), unit=unit)
 
 
-def log_nddata(nddata_ref):
+def log_nddata(nddata_ref): # natural log
     try:
         conv_data = convert_nddata(nddata_ref, 1)
     except:

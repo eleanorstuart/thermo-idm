@@ -94,7 +94,8 @@ class Cluster_werr():
 
     def rho_tot(self, r):
         y = r/self.rs
-        return (self.rho_s/(y * (1+y)**2)).to(u.Msun/u.Mpc**3)
+        #return (self.rho_s/(y * (1+y)**2))#.to(u.Msun/u.Mpc**3)
+        return np.divide(self.rho_s, (y * (1+y)**2))
     
 
     # pressure
@@ -226,12 +227,13 @@ class Cluster_werr():
     def vol_cooling_rate(self, r):
         mu_h=1.26
         mu_e=1.14
-        return (np.multiply(self.n_e(r)**2, self.cooling_function(r)) * mu_e/mu_h).to(u.erg/(u.s*u.cm**3))
+        conv = (u.Mpc/u.cm).to(1)
+        return (np.multiply((self.n_e(r)/conv**3)**2, self.cooling_function(r)) * mu_e/mu_h)#.to(u.erg/(u.s*u.cm**3))
 
     def total_cooling_rate(self, rmin, rmax, n=50):
-        log_rmin = np.log10(rmin.value)
-        log_rmax = np.log10(rmax.value)
-        rs = np.logspace(log_rmin, log_rmax, num=n)*u.Mpc
+        log_rmin = np.log10(rmin)
+        log_rmax = np.log10(rmax)
+        rs = np.logspace(log_rmin, log_rmax, num=n)
         integrand = (4 * np.pi * np.multiply(
             self.vol_cooling_rate(rs).to(u.erg/(u.s*u.Mpc**3)), 
             np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
@@ -240,41 +242,47 @@ class Cluster_werr():
     def cooling_function(self, r):
         alpha=-1.7
         beta=0.5
-        c1 = 8.6*1e-25 * u.erg*u.cm**3/u.s * u.keV**(-alpha)
-        c2= 5.8*1e-24*u.erg*u.cm**3/u.s * u.keV**(-beta)
-        c3=6.3*1e-24*u.erg*u.cm**3/u.s
-        return (c1*(self.T_g(r.value))**alpha + c2*self.T_g(r.value)**beta + c3).to(u.erg*u.cm**3/u.s)
+        c1 = 8.6*1e-25# * u.erg*u.cm**3/u.s * u.keV**(-alpha)
+        c2= 5.8*1e-24#*u.erg*u.cm**3/u.s * u.keV**(-beta)
+        c3=6.3*1e-24#*u.erg*u.cm**3/u.s
+        conv = (u.GeV/u.keV).to(1)
+        return (c1*(self.T_g(r)*conv)**alpha + c2*(self.T_g(r)*conv)**beta + c3)#.to(u.erg*u.cm**3/u.s)
 
     def n_e(self, r):
-        return np.sqrt(0.704)*(self.rho_g(r)/const.m_p).to(u.Mpc**-3)
+        return np.sqrt(0.704)*(self.rho_g(r)/(const.m_p).to(u.Msun).value)
 
     # DM cooling
     def virial_temperature(self, r, m_chi, f_chi=1, m_psi=0.1 * u.GeV,):
+        conv = (u.Msun/u.kg).to(1)
         M = self.M_enc(r)
-        frac = f_chi / m_chi + (1 - f_chi) / m_psi
-        M_kg = M.to(u.kg, equivalencies=u.mass_energy())
-        return (0.3 * const.G * M_kg / (r * frac) * 1 / const.c**2).to(u.GeV)
+        M_kg = self.M_enc(r) * conv
+        frac = f_chi / m_chi.value + (1 - f_chi) / m_psi.value
+        G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
+        #M_kg = M.to(u.kg, equivalencies=u.mass_energy())
+        return (0.3 * G * M / (r * frac))#.to(u.GeV)
 
     def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
-        T_b = self.T_g(r.value)
+        T_b = self.T_g(r)
         T_chi = self.virial_temperature(r, m_chi)
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(T_b / const.m_p.to(u.GeV) + T_chi / m_chi).to(1)
+            uth = np.sqrt(T_b / (const.m_p.to(u.GeV)).value + T_chi / m_chi.value)
         rho_chi = self.rho_tot(r) * f_chi
+        conv_dens = (u.Msun/u.Mpc**3).to(u.erg/u.cm**3)
+        conv_T = (u.GeV/u.erg).to(1)
 
-        denominator = ((m_chi + const.m_p) ** 2).to(u.GeV**2)
+        denominator = ((m_chi.value + const.m_p.to(u.GeV).value) ** 2)
         numerator = (
                 3
-                * (T_b - T_chi).to(u.erg)
-                * rho_chi.to(u.GeV/u.cm**3)
-                * self.rho_g(r).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
+                * (T_b - T_chi)/conv_T
+                * rho_chi*conv_dens#.to(u.GeV/u.cm**3)
+                * self.rho_g(r)*conv_dens#.to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
                 * c(n)
                 * uth ** (n + 1)
-                * (const.c.to(u.cm / u.s))
-                * s0
+                * (const.c.to(u.cm / u.s)).value
+                * s0.value
         
             )
-        return (numerator / denominator).to(u.erg/(u.s*u.cm**3))
+        return (numerator / denominator)#.to(u.erg/(u.s*u.cm**3))
 
     def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
         log_rmin = np.log10(rmin.value)

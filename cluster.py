@@ -2,12 +2,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy import constants as const
-from scipy.optimize import root, brentq
 from dataclasses import dataclass
 
 from plotting import savefig, paper_plot
 from cluster_functions import * 
-from iqbal_agn_heating_functions import vol_heating_rate
+from old_py_files.iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
 from cluster_measurements import ClusterMeasurements
 from nfw_profile_heating import NFWProfile

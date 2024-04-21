@@ -4,14 +4,12 @@ from astropy import units as u
 from astropy import constants as const
 
 from scipy.integrate import quad, trapezoid
-from scipy.optimize import approx_fprime, brentq
+from scipy.optimize import brentq
 
-from uncertainties import ufloat
 from uncertainties.umath import log
 
 from asymmetric_uncertainty import a_u, pos_errors, neg_errors
 from cluster_functions import c
-from astropy_error_prop_functions import power_nddata, convert_nddata, log_nddata
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)

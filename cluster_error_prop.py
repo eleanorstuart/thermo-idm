@@ -40,23 +40,15 @@ class Cluster_werr():
             self.rs = (self.Rvir/self.cvir).to(u.Mpc)
             self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
         elif M500: 
-            #print('INSIDE M500')
-            #self.M500=ufloat(M500.to(u.Msun).value, M500_err_lo.to(u.Msun).value, M500_err_hi.to(u.Msun).value)
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47))
             print(self.c500)
-            #self.R500 = R500 or self.get_R500()
-            #print(self.R500)
-            #print(self.M500.data)
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * (self.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
             print(self.R500)
             self.rs = self.R500/self.c500
             print(self.rs)
             self.rho_s = self.get_rho_s(500., self.c500)
             print(self.rho_s)
-
-            #self.Rvir = self.get_R_from_overdensity(self.overdensity_const)
-            #self.Mvir = self.M_enc(self.Rvir)
         else:
             raise ValueError("Provide Mvir or M500")
 
@@ -85,16 +77,10 @@ class Cluster_werr():
         return r*u.Mpc
 
     def get_R500(self):
-        #rho_avg = lambda x: self.M500.value/(4./3.*np.pi * x**3) - 500*(self.rho_c).to(u.Msun/u.Mpc**3).value
-        #r = brentq(rho_avg, 0.1, 10) # search between 0.1 and 10 Mpc
         return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
-        #print(self.M500.divide(4*np.pi/3 * 500. * self.rho_c))
-        #print(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)))
-        #return convert_nddata(power_nddata(self.M500.divide(4*np.pi/3 * 500. * self.rho_c),(1./3.)), u.Mpc)
 
     def rho_tot(self, r):
         y = r/self.rs
-        #return (self.rho_s/(y * (1+y)**2))#.to(u.Msun/u.Mpc**3)
         return np.divide(self.rho_s, (y * (1+y)**2))
     
 

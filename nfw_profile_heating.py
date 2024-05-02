@@ -49,6 +49,16 @@ class NFWProfile():
             self.M500 = self.M_enc(self.R500)
         if not self.R500:
             self.R500 = self.get_R_from_overdensity(500.)
+
+
+        # calculations to make L500_analytic faster
+        rmin = 0.0001*self.R500
+        rmax = self.R500
+        rc = 0.1*self.R500
+        mx = 1e-2*u.GeV
+        self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
+        self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
+        self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
     # profile properties
@@ -329,22 +339,25 @@ class NFWProfile():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, s0, mx):
-        rmin = 0.001*self.R500
-        rmax = self.R500
-        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.total_cooling_rate(rmin, rmax)).to(u.erg/u.s)
-        rc = 0.1*self.R500
-        agn_heating_without_Linj = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)
+    def L500_analytic(self, log_s0, mx):
+        #rmin = 0.0001*self.R500
+        #rmax = self.R500
+        #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
+        s0 = np.power(10., float(log_s0))
+        net_cool = ((s0)*self.dm_cooling_factors + self.tot_rad)#.to(u.erg/u.s)
+        #rc = 0.1*self.R500
+        agn_heating_without_Linj = 10*self.agn_factors
         Linj = net_cool/agn_heating_without_Linj # in erg/s
+
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38
         return np.power(10, logL500) * 1e44 *u.erg/u.s
 
-    def h_no_L(self, r, r0, rc, q):
-        return (1/(4*np.pi*r**2)
-            *(1-np.exp(-1*r/r0))
-            *np.exp(-1*r/rc)
-            *(1/q))
+    #def h_no_L(self, r, r0, rc, q):
+    #    return (1/(4*np.pi*r**2)
+    #        *(1-np.exp(-1*r/r0))
+    #        *np.exp(-1*r/rc)
+    #        *(1/q))
 
 
 

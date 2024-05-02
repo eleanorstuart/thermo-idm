@@ -54,6 +54,15 @@ class Cluster_werr():
             self.M500 = self.M_enc(self.R500)
         if not self.R500:
             self.R500 = self.get_R_from_overdensity(500.)
+
+        # calculations to make L500_analytic faster
+        rmin = 0.0001*self.R500
+        rmax = self.R500
+        rc = 0.1*self.R500
+        mx = 1e-2*u.GeV
+        self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
+        self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
+        self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
     # profile properties
@@ -143,6 +152,7 @@ class Cluster_werr():
             *(r/self.Pg(r/self.R500))*self.dP_dr([r.to(u.Mpc).value])).to(u.erg/(u.s*u.cm**3)) for r in rs]).flatten() * u.erg/(u.s * u.cm**3)
 
     def total_heating_rate(self, rmin, rmax, rc, Linj = None,n=50): # rmin, rmax, rc given in Mpc
+        print('INSIDE TOTAL HEATING RATE')
         log_rmin = np.log10(rmin.value)
         log_rmax = np.log10(rmax.value)
         rs = np.logspace(log_rmin, log_rmax, num=n)*u.Mpc
@@ -325,12 +335,14 @@ class Cluster_werr():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, s0, mx):
-        rmin = 0.001*self.R500
-        rmax = self.R500
-        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.total_cooling_rate(rmin, rmax)).to(u.erg/u.s)
-        rc = 0.1*self.R500
-        agn_heating_without_Linj = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)
+    def L500_analytic(self, log_s0, mx):
+        #rmin = 0.0001*self.R500
+        #rmax = self.R500
+        s0 = 10**log_s0*u.cm**2
+        #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
+        net_cool = (s0.value*self.dm_cooling_factors + self.tot_rad)#.to(u.erg/u.s)
+        #rc = 0.1*self.R500
+        agn_heating_without_Linj = self.agn_factors
         Linj = net_cool/agn_heating_without_Linj # in erg/s
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38

@@ -55,10 +55,10 @@ class NFWProfile():
         rmin = 0.0001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
-        mx = 1e-2*u.GeV
+        #mx = 1e-2*u.GeV
         self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
         self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
-        self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
+        #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
     # profile properties
@@ -261,11 +261,18 @@ class NFWProfile():
         M_kg = M.to(u.kg, equivalencies=u.mass_energy())
         return (0.3 * const.G * M_kg / (r * frac) * 1 / const.c**2).to(u.GeV)
 
+    # for fx=1 case
+    def Tx_over_mx(self, r):
+        M = self.M_enc(r)
+        #frac = f_chi / m_chi + (1 - f_chi) / m_psi
+        M_kg = M.to(u.kg, equivalencies=u.mass_energy())
+        return (0.3 * const.G * M_kg / (r) * 1 / const.c**2).to(1)
+
     def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         T_b = self.T_g(r.value)
         T_chi = self.virial_temperature(r, m_chi)
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(T_b / const.m_p.to(u.GeV) + T_chi / m_chi).to(1)
+            uth = np.sqrt(T_b / const.m_p.to(u.GeV) + self.Tx_over_mx(r)).to(1)
         rho_chi = self.rho_tot(r) * f_chi
 
         denominator = ((m_chi + const.m_p) ** 2).to(u.GeV**2)
@@ -339,12 +346,14 @@ class NFWProfile():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, log_s0, mx):
-        #rmin = 0.0001*self.R500
-        #rmax = self.R500
+    def L500_analytic(self, log_s0, log_mx):
+        rmin = 0.0001*self.R500
+        rmax = self.R500
         #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
         s0 = np.power(10., float(log_s0))
-        net_cool = ((s0)*self.dm_cooling_factors + self.tot_rad)#.to(u.erg/u.s)
+        mx = np.power(10., float(log_mx))*u.GeV
+        net_cool = ((s0)*self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
+         + self.tot_rad)#.to(u.erg/u.s)
         #rc = 0.1*self.R500
         agn_heating_without_Linj = 10*self.agn_factors
         Linj = net_cool/agn_heating_without_Linj # in erg/s

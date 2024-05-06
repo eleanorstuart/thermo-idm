@@ -58,6 +58,14 @@ class NFWProfile():
         #mx = 1e-2*u.GeV
         self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
         self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
+
+        log_rs = np.linspace(np.log10(rmin.value), np.log10(rmax.value), num=50)
+        rs = np.power(10, log_rs) * u.Mpc
+        self.Tbs = self.T_g([r.value for r in rs])
+        with u.set_enabled_equivalencies(u.mass_energy()):
+            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV) + self.Tx_over_mx(rs)).to(1)
+            self.dm_rdep_factors = (self.rho_tot(rs).to(u.GeV/u.cm**3) * self.rho_g(rs).to(u.GeV/u.cm**3)*uth)
+        
         #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
@@ -290,14 +298,34 @@ class NFWProfile():
         return (numerator / denominator).to(u.erg/(u.s*u.cm**3))
 
     def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
-        log_rmin = np.log10(rmin.value)
-        log_rmax = np.log10(rmax.value)
-        rs = np.logspace(log_rmin, log_rmax, num=num)*u.Mpc
+        #log_rmin = np.log10(rmin.value)
+        #log_rmax = np.log10(rmax.value)
+        #rs = np.logspace(log_rmin, log_rmax, num=num)*u.Mpc
     
-        integrand = (4 * np.pi * np.multiply(
-            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.Mpc**3)), 
-            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
-        return trapezoid(integrand, rs)
+        #integrand = (4 * np.pi * np.multiply(
+        #    self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.Mpc**3)), 
+        #    np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
+        #return trapezoid(integrand, rs)
+
+        log_rs = np.linspace(np.log10(rmin.value), np.log10(rmax.value), num=num)
+        rs = np.power(10, log_rs) * u.Mpc
+
+        vol_dm_cooling_rates = self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.cm**3))
+        integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
+
+        result = np.trapz(integrand, rs)
+        return result.to(u.erg/(u.s*u.Mpc))
+
+    def integrated_dm_cooling_rate_fast(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
+        log_rs = np.linspace(np.log10(rmin.value), np.log10(rmax.value), num=num)
+        rs = np.power(10, log_rs) * u.Mpc
+        constant = (3*c(n)*s0/(((m_chi + const.m_p) ** 2).to(u.GeV**2))).to(u.cm**2/u.GeV**2) * (const.c.to(u.cm / u.s))
+        rel_temp = (self.Tbs - self.virial_temperature(rs, m_chi)).to(u.GeV)
+        vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors).to(u.erg/(u.s*u.cm**3), equivalencies=u.mass_energy())
+        integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
+
+        result = np.trapz(integrand, rs)
+        return result.to(u.erg/(u.s))
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         rho_chi = self.rho_tot(r) * f_chi
@@ -352,7 +380,7 @@ class NFWProfile():
         #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
         s0 = np.power(10., float(log_s0))
         mx = np.power(10., float(log_mx))*u.GeV
-        net_cool = ((s0)*self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
+        net_cool = ((s0)*self.integrated_dm_cooling_rate_fast(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
          + self.tot_rad)#.to(u.erg/u.s)
         #rc = 0.1*self.R500
         agn_heating_without_Linj = 10*self.agn_factors

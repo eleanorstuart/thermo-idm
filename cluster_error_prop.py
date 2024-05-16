@@ -56,13 +56,13 @@ class Cluster_werr():
             self.R500 = self.get_R_from_overdensity(500.)
 
         # calculations to make L500_analytic faster
-        rmin = 0.0001*self.R500
-        rmax = self.R500
-        rc = 0.1*self.R500
-        mx = 1e-2*u.GeV
-        self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
-        self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
-        self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
+        #rmin = 0.0001*self.R500
+        #rmax = self.R500
+        #rc = 0.1*self.R500
+        #mx = 1e-2*u.GeV
+        #self.tot_rad = self.total_cooling_rate(rmin, rmax).to(u.erg/u.s)
+        #self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
+        #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
     # profile properties
@@ -279,14 +279,22 @@ class Cluster_werr():
         return (numerator / denominator)#.to(u.erg/(u.s*u.cm**3))
 
     def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
-        log_rmin = np.log10(rmin.value)
-        log_rmax = np.log10(rmax.value)
-        rs = np.logspace(log_rmin, log_rmax, num=num)*u.Mpc
-    
+        #log_rmin = np.log10(rmin)
+        #log_rmax = np.log10(rmax)
+        xmin = rmin.value/self.R500.value
+        xmax = rmax.value/self.R500.value
+        xs = np.logspace(np.log10(xmin), np.log10(xmax))
+        rs = xs*self.R500
+        #rs = np.logspace(log_rmin, log_rmax, num=num)*u.Mpc
+        #print([r.value for r in rs])
+
+        #rs_cm = rs*(u.Mpc/u.cm).to(1)
+
+
         integrand = (4 * np.pi * np.multiply(
-            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.Mpc**3)), 
-            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc))
-        return trapezoid(integrand, rs)
+            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi)*(u.Mpc/u.cm).to(1)**3, np.power(rs, 2)))
+        #print(integrand[0])
+        return np.trapz(integrand, rs)
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         rho_chi = self.rho_tot(r) * f_chi

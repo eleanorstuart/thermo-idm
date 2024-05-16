@@ -38,7 +38,7 @@ class NFWProfile():
         elif M500: 
             self.M500=M500
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1 * u.Msun))**(-0.084) * (1+self.z)**(-0.47)).to(1)
-            self.R500 = R500 or self.get_R500()
+            #self.R500 = R500 or self.get_R500()
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
             self.rs = self.R500/self.c500
             self.rho_s = self.get_rho_s(500., self.c500)
@@ -229,12 +229,21 @@ class NFWProfile():
         logMbh = 10+0.38*np.log10(L500/(1e44*u.erg/u.s))
         return np.power(10, logMbh)*u.Msun
 
-    def plasma_entropy(self, r):
-        adiabatic_idx = 5. / 3.
-        baryon_number_density = (2 * self.n_e(r)).to(u.m ** (-3))
+    def plasma_entropy(self, T500, ne500, adiabatic_idx):
+        baryon_number_density = (2 * ne500).to(u.m ** (-3))
         return (
-            const.k_B * self.T_g(r.to(u.Mpc).value).to(u.K, equivalencies=u.temperature_energy())
+            const.k_B * T500.to(u.K, equivalencies=u.temperature_energy())
         ).to(u.GeV) / baryon_number_density ** (adiabatic_idx - 1)    
+    
+    def total_gaspari_agn_heating_rate(self):
+        adiabatic_idx = 5. / 3.
+        T500 = self.T_g([self.R500.value])
+        ne500 = self.n_e([self.R500.value]*u.Mpc) 
+        norm = 1./4.
+        mu = 1
+
+        return (norm * 4* np.pi*(const.G*self.get_Mbh())**2*(mu*const.m_p)**(5./2)/(adiabatic_idx**(3./2))*self.plasma_entropy(T500, ne500, adiabatic_idx)**(-3./2)).to(u.erg/u.s)
+
 
     # radiative cooling rate
     def vol_cooling_rate(self, r):
@@ -314,15 +323,17 @@ class NFWProfile():
         integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
 
         result = np.trapz(integrand, rs)
-        return result.to(u.erg/(u.s*u.Mpc))
+        return result.to(u.erg/(u.s))
 
-    def integrated_dm_cooling_rate_fast(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
+    def integrated_dm_cooling_rate_fast(self, rmin, rmax, s0, m_chi, num = 50, n=0):
+        # calculate the cooling rate due to DM-baryon interactions
         log_rs = np.linspace(np.log10(rmin.value), np.log10(rmax.value), num=num)
         rs = np.power(10, log_rs) * u.Mpc
         constant = (3*c(n)*s0/(((m_chi + const.m_p) ** 2).to(u.GeV**2))).to(u.cm**2/u.GeV**2) * (const.c.to(u.cm / u.s))
         rel_temp = (self.Tbs - self.virial_temperature(rs, m_chi)).to(u.GeV)
         vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors).to(u.erg/(u.s*u.cm**3), equivalencies=u.mass_energy())
         integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
+        print(integrand.to(u.erg/(u.s*u.Mpc)))
 
         result = np.trapz(integrand, rs)
         return result.to(u.erg/(u.s))
@@ -344,7 +355,7 @@ class NFWProfile():
     def sigma0_from_mchi(self, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         # TODO: update to make these params customizable
         rmin = 0.002*self.R500
-        rmax = 0.1*self.R500
+        rmax = 0.1*self.R500#0.1*self.R500
         rc = 0.1*self.R500 
 
         log_rmin = np.log10(rmin.value)
@@ -374,17 +385,16 @@ class NFWProfile():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, log_s0, log_mx):
+    def L500_analytic(self, log_s0, log_mx, mult_agn = 1):
+        # calculate the predicted L500 based on sigma0 and mx parameters
         rmin = 0.0001*self.R500
         rmax = self.R500
-        #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
         s0 = np.power(10., float(log_s0))
         mx = np.power(10., float(log_mx))*u.GeV
         net_cool = ((s0)*self.integrated_dm_cooling_rate_fast(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
-         + self.tot_rad)#.to(u.erg/u.s)
-        #rc = 0.1*self.R500
-        agn_heating_without_Linj = 10*self.agn_factors
-        Linj = net_cool/agn_heating_without_Linj # in erg/s
+         + self.tot_rad)
+        agn_heating_without_Linj = mult_agn*self.agn_factors
+        Linj = net_cool/agn_heating_without_Linj
 
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38

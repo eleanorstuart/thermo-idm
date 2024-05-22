@@ -63,7 +63,16 @@ class Cluster_werr():
         self.tot_rad = self.total_cooling_rate(rmin, rmax)
         self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)
 
-        #self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50).to(u.erg/u.s)
+        xmin = rmin.value/self.R500.value
+        xmax = rmax.value/self.R500.value
+        xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
+        rs = xs*self.R500
+        self.Tbs = self.T_g(rs) 
+        with u.set_enabled_equivalencies(u.mass_energy()):
+            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_over_mx(rs))
+            conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
+            self.dm_rdep_factors = (self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
+        self.rvals = rs
         #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
@@ -164,8 +173,6 @@ class Cluster_werr():
         #    *(r/self.Pg(r/self.R500))*self.dP_dr([r])) for r in rs]).flatten()# * u.erg/(u.s * u.cm**3)
 
     def total_heating_rate(self, rmin, rmax, rc, Linj = None,n=50): # rmin, rmax, rc given in Mpc
-        print('INSIDE TOTAL HEATING RATE')
-
         xmin = rmin.value/self.R500.value
         xmax = rmax.value/self.R500.value
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
@@ -288,6 +295,16 @@ class Cluster_werr():
         #M_kg = M.to(u.kg, equivalencies=u.mass_energy())
         return (0.3 * G * M / (r * frac))#.to(u.GeV)
 
+    def Tx_over_mx(self, r):
+        #conv = (u.Msun/u.kg).to(1)
+        M = self.M_enc(r)
+        #M_kg = self.M_enc(r) * conv
+        #frac = f_chi / m_chi.value + (1 - f_chi) / m_psi.value
+        G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
+        #M_kg = M.to(u.kg, equivalencies=u.mass_energy())
+        return (0.3 * G * M / (r))#.to(u.GeV)
+
+
     def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         T_b = self.T_g(r)
         T_chi = self.virial_temperature(r, m_chi)
@@ -328,6 +345,22 @@ class Cluster_werr():
             self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi)*(u.Mpc/u.cm).to(1)**3, np.power(rs, 2)))
         #print(integrand[0])
         return np.trapz(integrand, rs)
+
+    def integrated_dm_cooling_rate_fast(self, s0, m_chi, n=0):
+        # calculate the cooling rate due to DM-baryon interactions
+        rs = self.rvals
+        #print(rs[0])
+        constant = ((3*c(n)*s0/(((m_chi + const.m_p) ** 2).to(u.GeV**2))).to(u.cm**2/u.GeV**2) * (const.c.to(u.cm / u.s))).value
+        #print(constant)
+        #print(self.Tbs[0], self.virial_temperature(rs, m_chi)[0])
+        rel_temp = (self.Tbs - self.virial_temperature(rs, m_chi))
+        #print(rel_temp[0])
+        vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors * (u.GeV).to(u.erg))#.to(u.erg/(u.s*u.cm**3), equivalencies=u.mass_energy())
+        integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2 *(u.Mpc**2).to(u.cm**2)
+        #print(integrand)
+
+        result = np.trapz(integrand, rs)
+        return result * (u.Mpc).to(u.cm)#.to(u.erg/(u.s))
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         rho_chi = self.rho_tot(r) * f_chi

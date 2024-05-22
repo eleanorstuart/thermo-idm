@@ -332,11 +332,15 @@ class NFWProfile():
         # calculate the cooling rate due to DM-baryon interactions
         log_rs = np.linspace(np.log10(rmin.value), np.log10(rmax.value), num=num)
         rs = np.power(10, log_rs) * u.Mpc
+        #print(rs[0])
         constant = (3*c(n)*s0/(((m_chi + const.m_p) ** 2).to(u.GeV**2))).to(u.cm**2/u.GeV**2) * (const.c.to(u.cm / u.s))
+        #print(constant)
+        #print(self.Tbs[0], self.virial_temperature(rs, m_chi)[0])
         rel_temp = (self.Tbs - self.virial_temperature(rs, m_chi)).to(u.GeV)
+        #print(rel_temp[0])
         vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors).to(u.erg/(u.s*u.cm**3), equivalencies=u.mass_energy())
         integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
-        print(integrand.to(u.erg/(u.s*u.Mpc)))
+        #print(integrand.to(u.erg/(u.s*u.Mpc)))
 
         result = np.trapz(integrand, rs)
         return result.to(u.erg/(u.s))

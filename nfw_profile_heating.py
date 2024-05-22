@@ -146,13 +146,15 @@ class NFWProfile():
     def Pg_r(self, r): 
         if isinstance(r, float):
             r = r*u.Mpc
-        return self.Pg(r/self.R500).value
+        return self.Pg(r/self.R500)#.value
 
     def dP_dr(self, rad): # rad has to be a list of rs in Mpc
-        if isinstance(rad, u.Quantity):
-            rad.to(u.Mpc)
-            rad = rad.value
-        return [approx_fprime(r, lambda x: self.Pg_r(x*u.Mpc), epsilon=r*1e-8)[0] for r in rad]*u.erg/(u.cm**3 * u.Mpc)
+        #if isinstance(rad, u.Quantity):
+        #    rad.to(u.Mpc)
+        #    rad = rad.value
+        #return [approx_fprime(r, lambda x: self.Pg_r(x*u.Mpc), epsilon=r*1e-8)[0] for r in rad]*u.erg/(u.cm**3 * u.Mpc)
+        return np.gradient(self.Pg_r(rad),rad )#*u.erg/(u.cm**3 * u.Mpc)
+        
 
     # gas profiles
     def rho_g(self, r): # density profile of the baryons in the ICM
@@ -185,6 +187,7 @@ class NFWProfile():
 
     def q(self, r0, rc):
         rini=r0.value # IS THIS TRUE?
+        #Rvir = self.get_R_from_overdensity(self.overdensity_const)
         rmax = 2*self.R500.to(u.Mpc).value # TODO: decide on rmax
         integral, _ = quad(lambda r: self.integrand(r, r0, rc), 
             rini, 
@@ -389,10 +392,11 @@ class NFWProfile():
         # calculate the predicted L500 based on sigma0 and mx parameters
         rmin = 0.0001*self.R500
         rmax = self.R500
-        s0 = np.power(10., float(log_s0))
+        s0 = np.power(10., float(log_s0)) * u.cm**2
         mx = np.power(10., float(log_mx))*u.GeV
-        net_cool = ((s0)*self.integrated_dm_cooling_rate_fast(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
-         + self.tot_rad)
+        #net_cool = ((s0)*self.integrated_dm_cooling_rate_fast(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
+        # + self.tot_rad)
+        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
         agn_heating_without_Linj = mult_agn*self.agn_factors
         Linj = net_cool/agn_heating_without_Linj
 

@@ -5,8 +5,32 @@ from scipy.optimize import brentq
 
 from equilibrium_functions import equil
 
-def chi_squared(model, data, variance): # take lists of model prediction, data, and variance of same length
-    return sum((model[i]-data[i])**2/variance[i]**2 for i in range(len(data)))
+def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
+    # TODO: add second source of variance
+    return sum((model[i]-data[i].value)**2/(variance[i].value**2 + add_var[i]**2) for i in range(len(data)))
+
+
+# log likelihood function for MCMC
+def log_lik(p0, obs, variances, nfws, multagn=1):
+    log_s0 = p0[0]
+    log_mx = p0[1]
+
+    # prior
+    if log_s0>0 or log_s0<-40:
+        return -np.inf
+    # DM particle mass is limited to being less than a proton mass
+    if log_mx<-4 or 10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+        return -np.inf
+
+    # calculate model predicted L500
+    predicted_werr = [nfw.L500_analytic(log_s0, log_mx, mult_agn=multagn) for nfw in nfws]
+    # TODO: take the error bars off of predicted and add them to variances
+    variances_pred = [max(p.plus, p.minus) for p in predicted_werr]
+
+    predicted = [p.value for p in predicted_werr]
+    X2 = chi_squared(predicted, obs, variances, add_var=variances_pred)
+    return -X2/2
+
 
 def log_likelihood_1(p0, T_data, var, clusters, m_chi):
     #if p0[0]<0 or p0[1]<0:

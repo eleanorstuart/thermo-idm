@@ -40,13 +40,13 @@ class Cluster_werr():
         elif M500: 
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47))
-            print(self.c500)
+            #print(self.c500)
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * (self.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
-            print(self.R500)
+            #print(self.R500)
             self.rs = self.R500/self.c500
-            print(self.rs)
+            #print(self.rs)
             self.rho_s = self.get_rho_s(500., self.c500)
-            print(self.rho_s)
+            #print(self.rho_s)
         else:
             raise ValueError("Provide Mvir or M500")
 
@@ -423,7 +423,7 @@ class Cluster_werr():
         #net_cool = (s0.value*self.dm_cooling_factors + self.tot_rad)#.to(u.erg/u.s)
         #rc = 0.1*self.R500
 
-        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad)
+        net_cool = (self.integrated_dm_cooling_rate_fast(s0, mx) + self.tot_rad)
         agn_heating_without_Linj = mult_agn*self.agn_factors.value
         Linj = net_cool/agn_heating_without_Linj
         #agn_heating_without_Linj = self.agn_factors

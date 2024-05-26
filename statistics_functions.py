@@ -4,30 +4,46 @@ from astropy import units as u
 from scipy.optimize import brentq
 
 from equilibrium_functions import equil
+from cluster_functions import c
+from asymmetric_uncertainty_mod import a_u
+
+mp_GeV = (const.m_p).to(u.GeV).value
+log_mp = np.log10(mp_GeV)
+c0 = c(0) * (const.c.to(u.cm / u.s)).value
+GeV_to_erg = (u.GeV).to(u.erg)
 
 def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
     # TODO: add second source of variance
-    return sum((model[i]-data[i].value)**2/(variance[i].value**2 + add_var[i]**2) for i in range(len(data)))
-
+    total_var = variance**2 + add_var**2
+    #return sum((model[i]-data[i].value)**2/(total_var[i]) for i in range(len(data)))
+    return np.sum((model - data)**2 / total_var)
 
 # log likelihood function for MCMC
-def log_lik(p0, obs, variances, nfws, multagn=1):
+def log_lik(p0, obs, nfws, variances, multagn=1):
     log_s0 = p0[0]
     log_mx = p0[1]
 
     # prior
-    if log_s0>0 or log_s0<-40:
-        return -np.inf
+    #if log_s0>0 or log_s0<-40:
+    #    return -np.inf
     # DM particle mass is limited to being less than a proton mass
-    if log_mx<-4 or 10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+    #if log_mx<-4 or log_mx>log_mp: #10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+    #    return -np.inf
+
+    if not (-40 <= log_s0 <= 0) or not (-4 <= log_mx <= log_mp):
         return -np.inf
 
     # calculate model predicted L500
-    predicted_werr = [nfw.L500_analytic(log_s0, log_mx, mult_agn=multagn) for nfw in nfws]
-    # TODO: take the error bars off of predicted and add them to variances
-    variances_pred = [max(p.plus, p.minus) for p in predicted_werr]
+    #s0 = np.power(10., float(log_s0))
+    #mx = np.power(10., float(log_mx))
+    s0 = 10**log_s0
+    mx = 10**log_mx
+    constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 
-    predicted = [p.value for p in predicted_werr]
+    predicted_werr = np.array([nfw.L500_analytic(mx, constant, mult_agn=multagn) for nfw in nfws])
+    variances_pred = np.array([max(p.plus, p.minus) for p in predicted_werr])
+    predicted = np.array([p.value for p in predicted_werr])
+
     X2 = chi_squared(predicted, obs, variances, add_var=variances_pred)
     return -X2/2
 

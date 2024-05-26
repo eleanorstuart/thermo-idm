@@ -8,7 +8,9 @@ from scipy.optimize import brentq
 
 from uncertainties.umath import log
 
-from asymmetric_uncertainty import a_u, pos_errors, neg_errors
+# from asymmetric_uncertainty import a_u, pos_errors, neg_errors
+from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
+
 from cluster_functions import c
 
 from astropy.cosmology import FlatLambdaCDM
@@ -23,14 +25,19 @@ gamma=0.31
 alpha=1.07
 beta=5.46
 gamma_b=4./3.
+c0 = c(0) * (const.c.to(u.cm / u.s)).value
+mp_GeV = (const.m_p).to(u.GeV).value
+GeV_to_erg = (u.GeV).to(u.erg)
+Mpc_to_cm = (u.Mpc).to(u.cm)
 
 # nfw profile class
 class Cluster_werr():
-    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_err_lo=None, M500_err_hi=None):
+    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_err_lo=None, M500_err_hi=None, L_err=None):
         self.z = z
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
         self.L500=L500 or None
+        self.L_err = L_err.value
         if Mvir:
             self.Mvir = Mvir
             self.cvir = (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
@@ -61,18 +68,25 @@ class Cluster_werr():
         rc = 0.1*self.R500
         #mx = 1e-2*u.GeV
         self.tot_rad = self.total_cooling_rate(rmin, rmax)
-        self.agn_factors = self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)
+        self.agn_factors = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
 
         xmin = rmin.value/self.R500.value
         xmax = rmax.value/self.R500.value
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
         rs = xs*self.R500
-        self.Tbs = self.T_g(rs) 
+        self.Tbs = np.asarray(self.T_g(rs)) 
+        self.Tx_by_mx = np.asarray(self.Tx_over_mx(rs))
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_over_mx(rs))
+            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_by_mx)
             conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
-            self.dm_rdep_factors = (self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
-        self.rvals = rs
+            self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
+
+        #rel_temp = (self.Tbs - self.Tx_by_mx * m_chi)
+        #vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors * GeV_to_erg)
+        #integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2 * Mpc_to_cm**2
+
+        #result = np.trapz(integrand, rs)
+        self.rvals = rs * Mpc_to_cm
         #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
 
@@ -346,21 +360,13 @@ class Cluster_werr():
         #print(integrand[0])
         return np.trapz(integrand, rs)
 
-    def integrated_dm_cooling_rate_fast(self, s0, m_chi, n=0):
-        # calculate the cooling rate due to DM-baryon interactions
+    def integrated_dm_cooling_rate_fast(self, m_chi, constant):
         rs = self.rvals
-        #print(rs[0])
-        constant = ((3*c(n)*s0/(((m_chi + const.m_p) ** 2).to(u.GeV**2))).to(u.cm**2/u.GeV**2) * (const.c.to(u.cm / u.s))).value
-        #print(constant)
-        #print(self.Tbs[0], self.virial_temperature(rs, m_chi)[0])
-        rel_temp = (self.Tbs - self.virial_temperature(rs, m_chi))
-        #print(rel_temp[0])
-        vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors * (u.GeV).to(u.erg))#.to(u.erg/(u.s*u.cm**3), equivalencies=u.mass_energy())
-        integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2 *(u.Mpc**2).to(u.cm**2)
-        #print(integrand)
+        rel_temp = (self.Tbs - self.Tx_by_mx * m_chi)
+        vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors)
+        integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
 
-        result = np.trapz(integrand, rs)
-        return result * (u.Mpc).to(u.cm)#.to(u.erg/(u.s))
+        return np.trapz(integrand, rs)
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         rho_chi = self.rho_tot(r) * f_chi
@@ -409,25 +415,10 @@ class Cluster_werr():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, log_s0, log_mx, mult_agn = 1):
-        #rmin = 0.0001*self.R500
-        #rmax = self.R500
-        #s0 = 10**log_s0*u.cm**2
-
-        rmin = 0.0001*self.R500
-        rmax = self.R500
-        s0 = np.power(10., float(log_s0))*u.cm**2
-        mx = np.power(10., float(log_mx))*u.GeV
-
-        #net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.tot_rad).to(u.erg/u.s)
-        #net_cool = (s0.value*self.dm_cooling_factors + self.tot_rad)#.to(u.erg/u.s)
-        #rc = 0.1*self.R500
-
-        net_cool = (self.integrated_dm_cooling_rate_fast(s0, mx) + self.tot_rad)
-        agn_heating_without_Linj = mult_agn*self.agn_factors.value
+    def L500_analytic(self, mx, constant, mult_agn = 1):
+        net_cool = (self.integrated_dm_cooling_rate_fast(mx, constant) + self.tot_rad)
+        agn_heating_without_Linj = mult_agn*self.agn_factors
         Linj = net_cool/agn_heating_without_Linj
-        #agn_heating_without_Linj = self.agn_factors
-        #Linj = net_cool/agn_heating_without_Linj # in erg/s
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38
         return np.power(10, logL500) * 1e44 

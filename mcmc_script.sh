@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --account=<project_id>
+#SBATCH --account=kmpardo_1230
 #SBATCH --partition=main
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --nodes=4
+#SBATCH --ntasks=8
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=8:00:00
 module purge

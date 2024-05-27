@@ -7,7 +7,7 @@ from scipy.integrate import quad, trapezoid
 from scipy.optimize import approx_fprime, brentq
 
 from cluster_functions import c
-from old_py_files.astropy_error_prop_functions import power_nddata, convert_nddata, log_nddata
+#from old_py_files.astropy_error_prop_functions import power_nddata, convert_nddata, log_nddata
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)

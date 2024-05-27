@@ -44,9 +44,9 @@ def run_mcmc():
         sampler.reset()
 
     # production run
-    with Pool() as pool:
+    #with Pool() as pool:
     # start sampler after some steps to minimize dependence on initial conditions
-        state_f = sampler.run_mcmc(state, 10000, progress = True)
+    #    state_f = sampler.run_mcmc(state, 10000, progress = True)
 
 
     # create corner plot of results

@@ -59,7 +59,7 @@ def run_mcmc():
     fig = corner.corner(
         flat_samples, labels=labels
     )
-    fig.savefig('plots.mcmc_corner_plot.pdf', format='pdf', dpi=300)
+    fig.savefig('plots/mcmc_corner_plot.pdf', format='pdf', dpi=300)
     return
 
 

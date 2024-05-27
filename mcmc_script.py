@@ -14,6 +14,7 @@ def run_mcmc():
     # create objects
     dataset, variances = load_data_and_var()
     nfws_werr = generate_nfws_from_combined_dataset_werr(dataset, variances)
+    print('created objects')
 
     # grab only low z clusters
     nfws_subset = [nfw for nfw in nfws_werr if nfw.z < 0.2]

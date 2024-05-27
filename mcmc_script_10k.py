@@ -44,10 +44,10 @@ def run_mcmc():
         state = sampler.run_mcmc(initial, 1000, progress=True)
         sampler.reset()
 
-    # production run
-    #with Pool() as pool:
-    # start sampler after some steps to minimize dependence on initial conditions
-    #    state_f = sampler.run_mcmc(state, 10000, progress = True)
+    #production run
+    with Pool() as pool:
+        #start sampler after some steps to minimize dependence on initial conditions
+        state_f = sampler.run_mcmc(state, 10000, progress = True)
 
 
     # create corner plot of results
@@ -59,7 +59,7 @@ def run_mcmc():
     fig = corner.corner(
         flat_samples, labels=labels
     )
-    fig.savefig('mcmc_corner_plot.pdf', format='pdf', dpi=300)
+    fig.savefig('plots.mcmc_corner_plot.pdf', format='pdf', dpi=300)
     return
 
 

@@ -92,7 +92,7 @@ class Cluster_werr():
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):
-        delta_c = overdensity/3 * concentration**3 / (log(1+concentration) - concentration/(1+concentration))
+        delta_c = overdensity/3 * concentration**3 / (np.log(1+concentration) - concentration/(1+concentration))
         rho_c = self.rho_c.to(u.Msun/u.Mpc**3).value
         return (delta_c*rho_c)
 

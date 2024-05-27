@@ -6,7 +6,7 @@ from astropy import constants as const
 from scipy.integrate import quad, trapezoid
 from scipy.optimize import brentq
 
-from uncertainties.umath import log
+#from uncertainties.umath import log
 
 # from asymmetric_uncertainty import a_u, pos_errors, neg_errors
 from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors

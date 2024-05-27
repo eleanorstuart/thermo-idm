@@ -106,11 +106,11 @@ class NFWProfile():
         h_p = 72./100.
         Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
         # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
-        return convert_nddata(
-            power_nddata(
-                self.M500.divide(1e15*h_p**(-1)*u.Msun),
-                 (2./3.)
-                 ).multiply((1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3) *Ez**(8./3.)), u.erg/u.cm**3)
+        #return convert_nddata(
+        #    power_nddata(
+        #        self.M500.divide(1e15*h_p**(-1)*u.Msun),
+        #         (2./3.)
+        #         ).multiply((1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3) *Ez**(8./3.)), u.erg/u.cm**3)
 
     def P500_planelles(self): #uses old method to compute P500
         M500 = self.M500.data*self.M500.unit
@@ -121,15 +121,15 @@ class NFWProfile():
         # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
         return (1.14/0.59 * 1.45*1e-11*u.erg/u.cm**3 * (M500/(1e15*h_p**(-1)*u.Msun))**(2./3.)*Ez**(8./3.)).to(u.erg/u.cm**3)
 
-    def Pg_incorrect_error_prop(self, x): #x=r/r500
-        if isinstance(x, float):
-            return convert_nddata((self.P500_planelles().multiply(P0)).divide(
-                np.power(c500*x,gamma) * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha)), u.erg/u.cm**3)
-        elif isinstance(x, NDDataRef):
-            return
-        else:
-            print(type(x))
-            raise ValueError('invalid x')
+    # def Pg_incorrect_error_prop(self, x): #x=r/r500
+    #     if isinstance(x, float):
+    #         #return convert_nddata((self.P500_planelles().multiply(P0)).divide(
+    #         #    np.power(c500*x,gamma) * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha)), u.erg/u.cm**3)
+    #     elif isinstance(x, NDDataRef):
+    #         return
+    #     else:
+    #         print(type(x))
+    #         raise ValueError('invalid x')
     
     def Pg(self, x): #x=r/r500
         P500 = self.P500_planelles().data*self.P500_planelles().unit
@@ -140,8 +140,8 @@ class NFWProfile():
     def Pg_r_incorrect_err(self, r): 
         if isinstance(r, float):
             r = r*u.Mpc
-        x = convert_nddata(power_nddata(self.R500, -1).multiply(r), 1)
-        return self.Pg(x).value
+        #x = convert_nddata(power_nddata(self.R500, -1).multiply(r), 1)
+        #return self.Pg(x).value
 
     def Pg_r(self, r): 
         if isinstance(r, float):

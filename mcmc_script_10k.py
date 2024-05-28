@@ -26,7 +26,7 @@ def run_mcmc():
 
     # grab only low z clusters
     nfws_subset = [nfw for nfw in nfws_werr if nfw.z < 0.2]
-    L_obs = np.array([nfw.L500.to(u.erg/u.s).value for nfw in nfws_subset])
+    L_obs = np.array([nfw.L500.value for nfw in nfws_subset])
     variances_obs = np.array([nfw.L_err for nfw in nfws_subset])
 
     # prepare MCMC

@@ -26,7 +26,7 @@ def load_data_and_var():
 
     return reflex_clean, variances
 
-def generate_nfws_from_combined_dataset_werr(dataset, variances, nrows=None):
+def generate_nfws_from_combined_dataset_werr(dataset, variances, nrows=None, rmin=None):
     cls_data={'M500':dataset['MSZ'],
           'L500':dataset['L500'],
           'z':dataset['z_y'], # take z from Planck
@@ -52,7 +52,8 @@ def generate_nfws_from_combined_dataset_werr(dataset, variances, nrows=None):
             L500=cls_table['L500'][i],
             M500_err_lo=cls_table['M500_err_lo'][i],
             M500_err_hi=cls_table['M500_err_hi'][i],
-            L_err = variances[i]
+            L_err = variances[i], 
+            rmin = rmin
         )
         for i in range(n)
     ]

@@ -32,12 +32,14 @@ Mpc_to_cm = (u.Mpc).to(u.cm)
 
 # nfw profile class
 class Cluster_werr():
-    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_err_lo=None, M500_err_hi=None, L_err=None):
+    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_err_lo=None, M500_err_hi=None, L_err=None, rmin=None):
         self.z = z
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
         self.L500=L500 or None
         self.L_err = L_err.value
+        if L_err:
+            self.L500 = a_u(self.L500.value, L_err.value, L_err.value)
         if Mvir:
             self.Mvir = Mvir
             self.cvir = (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
@@ -63,7 +65,7 @@ class Cluster_werr():
             self.R500 = self.get_R_from_overdensity(500.)
 
         # calculations to make L500_analytic faster
-        rmin = 0.0001*self.R500
+        rmin = rmin*self.R500 or 0.0001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
         #mx = 1e-2*u.GeV
@@ -249,9 +251,9 @@ class Cluster_werr():
 
     def get_Linj_from_L500(self, L=None):
         L500 = L or self.L500
-        logMbh = 10+0.38*np.log10(L500/(1e44*u.erg/u.s))
-        Mbh = np.power(10, logMbh)*u.Msun
-        return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)*u.Msun))
+        logMbh = 10+0.38*np.log10(L500)#/(1e44*u.erg/u.s))
+        Mbh = np.power(10, logMbh)#*u.Msun
+        return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)))#*u.Msun))
 
     # gaspari agn heating
     def get_Mbh(self, L=None):

@@ -3,6 +3,8 @@ import emcee
 import corner
 from astropy import units as u
 from astropy import constants as const
+
+import argparse
 from multiprocessing import Pool
 
 from statistics_functions import log_lik
@@ -11,9 +13,15 @@ from load_data_and_var import load_data_and_var, generate_nfws_from_combined_dat
 
 
 def run_mcmc():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('rmin', type=float, help='lower bound for integration when calculating heating and cooling rates')
+    args = parser.parse_args()
+    rmin = args.rmin
+
+
     # create objects
     dataset, variances = load_data_and_var()
-    nfws_werr = generate_nfws_from_combined_dataset_werr(dataset, variances)
+    nfws_werr = generate_nfws_from_combined_dataset_werr(dataset, variances, rmin=rmin)
     print('created objects')
 
     # grab only low z clusters

@@ -32,7 +32,7 @@ def run_mcmc():
 
     # prepare MCMC
 
-    ndim, nwalkers = 2, 32
+    ndim, nwalkers = 2, 16
     initial=np.zeros((nwalkers, ndim ))
 
     # initialize walkers
@@ -71,7 +71,7 @@ def run_mcmc():
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
 
-    fig.savefig(f'plots/mcmc_corner_plot_{formatted_datetime}.pdf', format='pdf', dpi=450)
+    fig.savefig(f'plots/mcmc_corner_plot_{nwalkers}_{rmin}_{formatted_datetime}.pdf', format='pdf', dpi=450)
     return
 
 

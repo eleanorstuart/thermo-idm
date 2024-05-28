@@ -3,6 +3,7 @@ import emcee
 import corner
 from astropy import units as u
 from astropy import constants as const
+import datetime
 
 import argparse
 from multiprocessing import Pool
@@ -67,7 +68,10 @@ def run_mcmc():
     fig = corner.corner(
         flat_samples, labels=labels
     )
-    fig.savefig('plots/mcmc_corner_plot.pdf', format='pdf', dpi=300)
+    current_datetime = datetime.datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+
+    fig.savefig(f'plots/mcmc_corner_plot_{formatted_datetime}.pdf', format='pdf', dpi=450)
     return
 
 

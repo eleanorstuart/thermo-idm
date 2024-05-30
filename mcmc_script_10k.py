@@ -72,6 +72,11 @@ def run_mcmc():
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
 
     fig.savefig(f'plots/mcmc_corner_plot_{nwalkers}_{rmin}_{formatted_datetime}.pdf', format='pdf', dpi=450)
+
+    import pickle
+    with open('pickled/mcmc_{nwalkers}walkers_{rmin}steps_{formatted_datetime}.pkl', 'wb') as f:
+        pickle.dump(flat_samples, f)
+
     return
 
 

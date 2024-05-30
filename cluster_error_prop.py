@@ -6,9 +6,7 @@ from astropy import constants as const
 from scipy.integrate import quad, trapezoid
 from scipy.optimize import brentq
 
-#from uncertainties.umath import log
 
-# from asymmetric_uncertainty import a_u, pos_errors, neg_errors
 from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 
 from cluster_functions import c
@@ -362,12 +360,12 @@ class Cluster_werr():
         #print(integrand[0])
         return np.trapz(integrand, rs)
 
-    def integrated_dm_cooling_rate_fast(self, m_chi, constant):
+    def integrated_dm_cooling_rate_fast(self, mx, s0_factors):
+        # calculate the DM cooling rate for a given mchi and sigma0
         rs = self.rvals
-        rel_temp = (self.Tbs - self.Tx_by_mx * m_chi)
-        vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors)
+        rel_temp = (self.Tbs - self.Tx_by_mx * mx)
+        vol_dm_cooling_rates = (s0_factors * rel_temp * self.dm_rdep_factors)
         integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
-
         return np.trapz(integrand, rs)
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
@@ -417,10 +415,14 @@ class Cluster_werr():
         log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
         return np.power(10, log_L_pred)*u.erg/u.s
 
-    def L500_analytic(self, mx, constant, mult_agn = 1):
-        net_cool = (self.integrated_dm_cooling_rate_fast(mx, constant) + self.tot_rad)
+    def L500_analytic(self, mx, s0_factors, mult_agn = 1):
+        # calculates predicted L500 for a given mx and sigma0 
+
+        net_cool = (self.integrated_dm_cooling_rate_fast(mx, s0_factors) + self.tot_rad)
         agn_heating_without_Linj = mult_agn*self.agn_factors
+        # calculate predicted Linj
         Linj = net_cool/agn_heating_without_Linj
+        # convert Linj into L500
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38
         return np.power(10, logL500) * 1e44 

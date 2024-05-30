@@ -16,8 +16,8 @@ from load_data_and_var import load_data_and_var, generate_nfws_from_combined_dat
 def run_mcmc():
     parser = argparse.ArgumentParser()
     parser.add_argument('rmin', type=float, help='lower bound for integration when calculating heating and cooling rates')
-    parser.add_argument('nwalkers', type=float, help='number of walkers')
-    parser.add_argument('nsteps', type=float, help='number of steps chains should run')
+    parser.add_argument('nwalkers', type=int, help='number of walkers')
+    parser.add_argument('nsteps', type=int, help='number of steps chains should run')
     args = parser.parse_args()
     rmin = args.rmin
     nwalkers = args.nwalkers

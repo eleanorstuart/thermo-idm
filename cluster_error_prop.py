@@ -36,15 +36,15 @@ class Cluster_werr():
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
         self.L500=L500 or None
         self.L_err = L_err.value
-        if L_err:
+        if L_err!=None:
             self.L500 = a_u(self.L500.value, L_err.value, L_err.value)
-        if Mvir:
+        if Mvir!=None:
             self.Mvir = Mvir
             self.cvir = (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
             self.Rvir = ((self.Mvir/(4*np.pi/3 * self.overdensity_const * self.rho_c))**(1/3)).to(u.Mpc)
             self.rs = (self.Rvir/self.cvir).to(u.Mpc)
             self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
-        elif M500: 
+        elif M500!=None: 
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47))
             #print(self.c500)

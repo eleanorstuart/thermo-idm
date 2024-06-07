@@ -116,7 +116,7 @@ class Cluster_werr():
 
     def rho_tot(self, r):
         y = r/self.rs
-        return np.divide(self.rho_s, (y * (1+y)**2))
+        return np.divide(self.rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
     
 
     # pressure
@@ -307,6 +307,7 @@ class Cluster_werr():
         frac = f_chi / m_chi.value + (1 - f_chi) / m_psi.value
         G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
         #M_kg = M.to(u.kg, equivalencies=u.mass_energy())
+        print(r)
         return (0.3 * G * M / (r * frac))#.to(u.GeV)
 
     def Tx_over_mx(self, r):
@@ -369,41 +370,48 @@ class Cluster_werr():
         return np.trapz(integrand, rs)
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
-        rho_chi = self.rho_tot(r) * f_chi
+        rho_chi = self.rho_tot(r) #* f_chi
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(self.T_g(r.value) / const.m_p.to(u.GeV) + self.virial_temperature(r, m_chi) / m_chi).to(1)
+            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value +self.Tx_by_mx)#+ self.virial_temperature(r, m_chi) / m_chi).to(1)
+        #conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
+        #self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
         return (
             3
-            * (self.T_g(r.value) - self.virial_temperature(r, m_chi)).to(u.erg)
-            * rho_chi.to(u.GeV / u.cm**3)
-            * self.rho_g(r).to(u.GeV / u.cm**3, equivalencies=u.mass_energy())
+            * (self.Tbs - self.Tx_by_mx * m_chi.value)#self.virial_temperature(r, m_chi)).to(u.erg)
+            #* rho_chi*(u.Msun/u.Mpc**3).to(u.GeV / u.cm**3)
+            #* self.rho_g(r).to(u.GeV / u.cm**3, equivalencies=u.mass_energy())
+            *self.dm_rdep_factors
             * c(n)
-            * uth ** (n + 1)
-            * (const.c.to(u.cm / u.s))
-        ) / ((m_chi + const.m_p) ** 2).to(u.GeV**2)
+            #* uth ** (n + 1)
+            * (const.c.to(u.cm / u.s).value)
+        ) / ((m_chi.value + const.m_p.to(u.GeV).value) ** 2)#.to(u.GeV**2)
 
-    def sigma0_from_mchi(self, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
+    def sigma0_from_mchi(self, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, rmin=0.002, rmax=0.1, agn_factor=1):
         # TODO: update to make these params customizable
-        rmin = 0.002*self.R500
-        rmax = 0.1*self.R500
+        rmin = rmin*self.R500
+        rmax = 1*self.R500
         rc = 0.1*self.R500 
 
-        log_rmin = np.log10(rmin.value)
-        log_rmax = np.log10(rmax.value)
-        rs = np.logspace(log_rmin, log_rmax)*u.Mpc
+        xmin = rmin.value/self.R500.value
+        xmax = rmax.value/self.R500.value
+        xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
+        rs = xs*self.R500
+
+        #print(self.calculate_s0_integrand(rs, m_chi, n=n, f_chi=f_chi, m_psi=m_psi))
+        #print(np.power(self.rvals, 2))
 
         integrand = (4 * np.pi * np.multiply(
-            self.calculate_s0_integrand(rs, m_chi, n=n, f_chi=f_chi, m_psi=m_psi).to(u.erg/(u.s*u.Mpc**3*u.cm**2)), 
-            np.power(rs, 2))).to(u.erg/(u.s*u.Mpc*u.cm**2))
-        integral = trapezoid(integrand, rs)
+            self.calculate_s0_integrand(rs, m_chi, n=n, f_chi=f_chi, m_psi=m_psi),#.to(u.erg/(u.s*u.Mpc**3*u.cm**2)), 
+            np.power(self.rvals, 2)))#.to(u.erg/(u.s*u.Mpc*u.cm**2))
+        integral = trapezoid(integrand, self.rvals)
 
         return (
             (
-                self.total_heating_rate(rmin, rmax, rc)
-                - self.total_cooling_rate(rmin, rmax)
+                agn_factor*self.total_heating_rate(rmin, rmax, rc).value
+                - self.total_cooling_rate(rmin, rmax).value
             )
             / (integral)
-        ).to(u.cm**2)
+        )#.to(u.cm**2)
 
     # for MCMC
     def solve_for_L500(self, s0, mx):

@@ -30,7 +30,7 @@ def log_lik(p0, obs, nfws, variances, multagn=1):
     #if log_mx<-4 or log_mx>log_mp: #10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
     #    return -np.inf
 
-    if not (-40 <= log_s0 <= 0) or not (-4 <= log_mx <= - 1): # mx<0.1GeV
+    if not (-40 <= log_s0 <= 0) or not (-4 <= log_mx <= -1): # mx<0.1GeV
         return -np.inf
 
     # calculate model predicted L500

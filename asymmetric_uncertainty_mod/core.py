@@ -163,7 +163,7 @@ class a_u:
         
     def __add__(self,other):
         if isinstance(other, float):
-            return a_u(self.value + other.value,self.plus,self.minus)
+            return a_u(self.value + other,self.plus,self.minus)
         elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
         result = self.value + other.value
@@ -185,7 +185,7 @@ class a_u:
     
     def __sub__(self,other):
         if isinstance(other, float):
-            return a_u(self.value - other.value,self.plus,self.minus)
+            return a_u(self.value - other,self.plus,self.minus)
         elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
         result = self.value - other.value

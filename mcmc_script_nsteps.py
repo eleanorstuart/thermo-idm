@@ -78,7 +78,7 @@ def run_mcmc():
     fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
     import pickle
-    with open('pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_{formatted_datetime}.pkl', 'wb') as f:
+    with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
 
     return

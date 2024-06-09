@@ -162,7 +162,9 @@ class a_u:
         return a_u(-self.value,self.minus,self.plus)
         
     def __add__(self,other):
-        if not isinstance(other, type(self)):
+        if isinstance(other, float):
+            return a_u(self.value + other.value,self.plus,self.minus)
+        elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
         result = self.value + other.value
         pos = np.sqrt(self.plus**2 + other.plus**2)
@@ -182,7 +184,9 @@ class a_u:
         return a_u(result,pos,neg)
     
     def __sub__(self,other):
-        if not isinstance(other, type(self)):
+        if isinstance(other, float):
+            return a_u(self.value - other.value,self.plus,self.minus)
+        elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
         result = self.value - other.value
         pos = np.sqrt(self.plus**2 + other.minus**2)
@@ -202,7 +206,13 @@ class a_u:
         return a_u(result,pos,neg)
     
     def __mul__(self,other):
-        if not isinstance(other, type(self)):
+        if isinstance(other, float):
+            result = self.value * other
+            pos = (self.plus/self.value) * np.abs(result)
+            neg = (self.minus/self.value) * np.abs(result)
+            return a_u(result,pos,neg)
+
+        elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
 
         result = self.value * other.value
@@ -212,7 +222,13 @@ class a_u:
         return a_u(result,pos,neg)
     
     def __rmul__(self,other):
-        if not isinstance(other, type(self)):
+        if isinstance(other, float):
+            result = self.value * other
+            pos = (self.plus/self.value) * np.abs(result)
+            neg = (self.minus/self.value) * np.abs(result)
+            return a_u(result,pos,neg)
+
+        elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
 
         result = self.value * other.value
@@ -242,8 +258,16 @@ class a_u:
         return a_u(result,pos,neg)
     
     def __pow__(self,other): # self to the something power
-        if not isinstance(other, type(self)):
+        if isinstance(other, float):
+            result = self.value**other
+            pos = np.abs(result)*(self.plus*other/self.value)
+            neg = np.abs(result)*(self.minus*other/self.value)
+            #print("raised",self,"to",other,"=",a_u(result,pos,neg))        
+            return a_u(result,pos,neg)
+
+        elif not isinstance(other, type(self)):
             other = a_u(other,0,0)
+
         result = self.value**other.value
         pos = np.abs(result)*np.sqrt((self.plus*other.value/self.value)**2 + (other.plus*np.log(self.value))**2)
         neg = np.abs(result)*np.sqrt((self.minus*other.value/self.value)**2 + (other.minus*np.log(self.value))**2)

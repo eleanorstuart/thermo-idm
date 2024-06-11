@@ -30,7 +30,7 @@ def create_initial_state(nwalkers, ndim):
 
     return initial
 
-def plot_and_save_results(sampler, rmin, nwalkers, nsteps):
+def plot_and_save_results(sampler, args):
 
         # create corner plot of results
     flat_samples = sampler.get_chain(thin=15, flat=True)
@@ -44,8 +44,8 @@ def plot_and_save_results(sampler, rmin, nwalkers, nsteps):
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
 
-    fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_{formatted_datetime}.pdf', format='pdf', dpi=450)
+    fig.savefig(f'plots/mcmc_corner_plot_{args.rmin}_{args.nwalkers}_{args.nsteps}_{args.agn_model}_{args.mult_factor}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
     import pickle
-    with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_{formatted_datetime}.pkl', 'wb') as f:
+    with open(f'pickled/mcmc_{args.rmin}_{args.nwalkers}_{args.nsteps}_{args.agn_model}_{args.mult_factor}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)

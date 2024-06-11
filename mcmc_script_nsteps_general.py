@@ -50,7 +50,7 @@ def run_mcmc():
         #start sampler after some steps to minimize dependence on initial conditions
         state_f = sampler.run_mcmc(state, nsteps, progress = True)
 
-    plot_and_save_results(sampler, rmin, nwalkers, nsteps)
+    plot_and_save_results(sampler, args)
     return
 
 

@@ -256,8 +256,8 @@ class Cluster_werr():
     # gaspari agn heating
     def get_Mbh(self, L=None):
         L500 = L or self.L500
-        logMbh = 10+0.38*np.log10(L500/(1e44*u.erg/u.s))
-        return np.power(10, logMbh)*u.Msun
+        logMbh = 10+0.38*np.log10(L500)
+        return np.power(10, logMbh)
 
     def plasma_entropy(self, r):
         adiabatic_idx = 5. / 3.
@@ -368,6 +368,11 @@ class Cluster_werr():
         vol_dm_cooling_rates = (s0_factors * rel_temp * self.dm_rdep_factors)
         integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2
         return np.trapz(integrand, rs)
+    
+    def calculate_eddington_luminosity(self):
+        # calculate eddington luminosity for a galaxy cluster as a float in units of erg/s
+        return (10**(47.5) * self.get_Mbh()/(10**(9.5)))
+
 
     def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
         rho_chi = self.rho_tot(r) #* f_chi
@@ -434,6 +439,21 @@ class Cluster_werr():
         Mbh = Linj/10**(34.5) # in Msun
         logL500 = (np.log10(Mbh)-10)/0.38
         return np.power(10, logL500) * 1e44 
+    
+    def L500_analytic_eddington(self, mx, s0_factors, frac_L = 1):
+        # returns the predicted L500 for a given mx and sigma0 based on the eddington luminosity equation and L500-Mbh relation
+        # calculate predicted eddington luminosity
+        eddington_luminosity = (self.integrated_dm_cooling_rate_fast(mx, s0_factors) + self.tot_rad)/(frac_L)
+        
+        # calculate Mbh 
+        Mbh = eddington_luminosity/1e38
+        
+        # calculate logL500 from Mbh
+        logL500 = (np.log10(Mbh) - 10) / 0.38
+        
+        # return L500
+        return np.power(10, logL500) * 1e44
+
 
     def h_no_L(self, r, r0, rc, q):
         return (1/(4*np.pi*r**2)

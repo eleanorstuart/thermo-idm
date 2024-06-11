@@ -1,6 +1,7 @@
 import numpy as np
 import corner
 import datetime
+import pickle
 
 from load_data_and_var import load_data_and_var, generate_nfws_from_combined_dataset_werr
 
@@ -46,6 +47,7 @@ def plot_and_save_results(sampler, args):
 
     fig.savefig(f'plots/mcmc_corner_plot_{args.rmin}_{args.nwalkers}_{args.nsteps}_{args.agn_model}_{args.mult_factor}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
-    import pickle
     with open(f'pickled/mcmc_{args.rmin}_{args.nwalkers}_{args.nsteps}_{args.agn_model}_{args.mult_factor}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
+
+    return

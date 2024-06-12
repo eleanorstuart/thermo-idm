@@ -437,7 +437,7 @@ class Cluster_werr():
         Linj = net_cool/agn_heating_without_Linj
         # convert Linj into L500
         Mbh = Linj/10**(34.5) # in Msun
-        logL500 = (np.log10(Mbh)-10)/0.38
+        logL500 =  (np.log10(Mbh) - a_u(10, 0.11, 0.11)) / a_u(0.38, 0.3, 0.3)
         return np.power(10, logL500) * 1e44 
     
     def L500_analytic_eddington(self, mx, s0_factors, frac_L = 1):
@@ -449,7 +449,7 @@ class Cluster_werr():
         Mbh = eddington_luminosity/1e38
         
         # calculate logL500 from Mbh
-        logL500 = (np.log10(Mbh) - 10) / 0.38
+        logL500 = (np.log10(Mbh) - a_u(10, 0.11, 0.11)) / a_u(0.38, 0.03, 0.03)
         
         # return L500
         return np.power(10, logL500) * 1e44

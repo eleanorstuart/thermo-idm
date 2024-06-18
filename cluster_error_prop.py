@@ -10,6 +10,7 @@ from scipy.optimize import brentq
 from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 
 from cluster_functions import c
+from cluster_energies import Energies
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -63,7 +64,7 @@ class Cluster_werr():
             self.R500 = self.get_R_from_overdensity(500.)
 
         # calculations to make L500_analytic faster
-        rmin = rmin*self.R500 or 0.0001*self.R500
+        rmin = rmin*self.R500 if rmin else 0.0001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
         #mx = 1e-2*u.GeV
@@ -89,6 +90,7 @@ class Cluster_werr():
         self.rvals = rs * Mpc_to_cm
         #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
+        self.energies=Energies(self)
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):

@@ -11,6 +11,7 @@ from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 
 from cluster_functions import c
 from cluster_energies import Energies
+from cluster_iqbal_heating import IqbalHeating
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -31,43 +32,28 @@ Mpc_to_cm = (u.Mpc).to(u.cm)
 
 # nfw profile class
 class Cluster_werr():
-    def __init__(self, z, Mvir=None, M500=None, R500=None, L500=None, M500_err_lo=None, M500_err_hi=None, L_err=None, rmin=None):
+    def __init__(self, z, M500=None, L500=None, M500_err_lo=None, M500_err_hi=None, L_err=None, rmin=None):
         self.z = z
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
-        self.L500=L500 or None
+        self.L500=L500
         self.L_err = L_err.value
         if L_err!=None:
             self.L500 = a_u(self.L500.value, L_err.value, L_err.value)
-        if Mvir!=None:
-            self.Mvir = Mvir
-            self.cvir = (7.85*(self.Mvir/(2*1e12 * h**-1 * u.Msun))**(-0.081) * (1+self.z)**(-0.71)).to(1)
-            self.Rvir = ((self.Mvir/(4*np.pi/3 * self.overdensity_const * self.rho_c))**(1/3)).to(u.Mpc)
-            self.rs = (self.Rvir/self.cvir).to(u.Mpc)
-            self.rho_s = self.get_rho_s(self.overdensity_const, self.cvir)
-        elif M500!=None: 
+        if M500!=None: 
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
-            self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47))
-            #print(self.c500)
+            self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47)) #this is an estimate from c200
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * (self.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
-            #print(self.R500)
             self.rs = self.R500/self.c500
-            #print(self.rs)
             self.rho_s = self.get_rho_s(500., self.c500)
-            #print(self.rho_s)
         else:
-            raise ValueError("Provide Mvir or M500")
-
-        if not M500:
-            self.M500 = self.M_enc(self.R500)
-        if not self.R500:
-            self.R500 = self.get_R_from_overdensity(500.)
+            raise ValueError("Provide M500")
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.0001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
-        #mx = 1e-2*u.GeV
+
         self.tot_rad = self.total_cooling_rate(rmin, rmax)
         self.agn_factors = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
 
@@ -82,15 +68,10 @@ class Cluster_werr():
             conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
             self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
 
-        #rel_temp = (self.Tbs - self.Tx_by_mx * m_chi)
-        #vol_dm_cooling_rates = (constant * rel_temp * self.dm_rdep_factors * GeV_to_erg)
-        #integrand = 4 * np.pi * vol_dm_cooling_rates * rs**2 * Mpc_to_cm**2
-
-        #result = np.trapz(integrand, rs)
         self.rvals = rs * Mpc_to_cm
-        #self.dm_cooling_factors = self.integrated_dm_cooling_rate(rmin, rmax, 1*u.cm**2, mx).to(u.erg/u.s)
         
         self.energies=Energies(self)
+        self.heating=IqbalHeating(self)
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):
@@ -108,28 +89,17 @@ class Cluster_werr():
         
         return np.multiply((4 * np.pi * self.rs**3 * self.rho_s), y_term)
 
-    def get_R_from_overdensity(self, overdensity):
-        rho_avg = lambda x: self.M_enc(x).value/(4./3.*np.pi * x**3) - overdensity*(self.rho_c).to(u.Msun/u.Mpc**3).value
-        r = brentq(rho_avg, 0.1, 10) # search between 0.1 and 10 Mpc
-        return r*u.Mpc
-
-    def get_R500(self):
-        return ((self.M500/(4*np.pi/3 * 500. * self.rho_c))**(1./3.)).to(u.Mpc)
 
     def rho_tot(self, r):
         y = r/self.rs
         return np.divide(self.rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
     
-
     # pressure
-
     def P500_planelles(self): #uses old method to compute P500
-        #M500 = self.M500.data*self.M500.unit
         omega_m =0.24
         omega_lambda = 1-omega_m
         h_p = 72./100.
         Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
-        # equivalently: Ez = cosmo.H(self.z)/cosmo.H0 
         # returns in erg/cm3
         return (1.14/0.59 * 1.45*1e-11 * (self.M500/(1e15*h_p**(-1)))**(2./3.)*Ez**(8./3.))
 
@@ -174,19 +144,15 @@ class Cluster_werr():
     # effervescent heating 
     def vol_heating_rate(self, rs, rc, Linj=None):
         r0=(0.015*self.R500)#.to(u.Mpc)
-        q_factor = self.q(r0, rc)
+        q_factor = self.heating.q(r0, rc)
         L = Linj or self.get_Linj_from_L500() #Linj or self.Linj(rc)
 
-        hs = self.h(L, rs, r0, rc, q_factor)
+        hs = self.heating.h(L, rs, r0, rc, q_factor)
         Pgs = self.Pg(rs/self.R500)
         dPgdrs = self.dP_dr(rs)
 
         return(hs*Pgs**((gamma_b-1)/gamma_b))*(1./Pgs)*dPgdrs * (u.cm**3/u.Mpc**3).to(1)
 
-        #return np.array([(self.h(L, r, r0, rc, q_factor)
-        #   *(self.Pg(r/self.R500))**((gamma_b-1)/gamma_b)
-        #    *(1/r)
-        #    *(r/self.Pg(r/self.R500))*self.dP_dr([r])) for r in rs]).flatten()# * u.erg/(u.s * u.cm**3)
 
     def total_heating_rate(self, rmin, rmax, rc, Linj = None,n=50): # rmin, rmax, rc given in Mpc
         xmin = rmin.value/self.R500.value
@@ -202,52 +168,6 @@ class Cluster_werr():
             np.power(rs, 2)) * (u.Mpc**3/u.cm**3).to(1)
         return trapezoid(integrand, rs)
 
-    def q(self, r0, rc, n=50):
-        rini=r0#.value # IS THIS TRUE?
-        #rmax = self.Rvir.to(u.Mpc).value
-        rmax = 2*self.R500 #.to(u.Mpc).value # TODO: decide on rmax
-
-        xmin = rini.value/self.R500.value
-        xmax = rmax.value/self.R500.value
-        xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
-        rs = xs*self.R500
-
-        integral = np.trapz(self.integrand(rs, r0, rc), rs)
-
-        #integral, _ = quad(lambda r: self.integrand(r, r0, rc), 
-        #    rini, 
-        #    rmax)
-    
-        #integral = 
-        #rs = np.logspace(np.log10(rini), np.log10(rmax))*u.Mpc
-        #integrands = self.integrand(rs, r0, rc)
-        #integral = trapezoid(integrands, rs) #TODO: work out units to be able to use trapezoid
-        return integral#*(u.erg**(1/4) * u.cm**(-3/4))
-
-    def integrand(self, r, r0, rc):
-        #r=r*u.Mpc if isinstance(r, float) else r
-        #r0=r0*u.Mpc if isinstance(r0, float) else r0
-        #rc=rc*u.Mpc if isinstance(rc, float) else rc
-        x=r/self.R500
-        intgrd=(((self.Pg(x))**((gamma_b-1)/gamma_b))#.to(u.erg**(1/4)*u.cm**(-3/4))
-               *(1/self.Pg(x))#.to(u.cm**3/u.erg) 
-               *self.dP_dr(r)#.to(u.erg/(u.cm**3 * u.Mpc))
-               *(1-np.exp(-1*r/r0))#.to(1)
-               *(np.exp(-1*r/rc)))#.to(1))
-        return intgrd#.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
-
-    def h(self, Linj, r, r0, rc, q):
-        return (Linj/(4*np.pi*r**2)
-            *(1-np.exp(-1*r/r0))
-            *np.exp(-1*r/rc)
-            *(1/q))
-
-    def Linj(self, rc):
-        if rc == 0.3*self.R500:
-            logLinj = -0.96 + 1.73*np.log10(self.Mvir/(1e14 * u.Msun))
-        elif rc == 0.1*self.R500:
-            logLinj = -1.58 + 1.53*np.log10(self.Mvir/(1e14 * u.Msun))
-        return np.power(10, logLinj) * 1e45 * u.erg/u.s
 
     def get_Linj_from_L500(self, L=None):
         L500 = L or self.L500
@@ -421,15 +341,6 @@ class Cluster_werr():
         )#.to(u.cm**2)
 
     # for MCMC
-    def solve_for_L500(self, s0, mx):
-        rmin = 0.001*self.R500
-        rmax = self.R500
-        net_cool = (self.integrated_dm_cooling_rate(rmin, rmax, s0, mx) + self.total_cooling_rate(rmin, rmax)).to(u.erg/u.s)
-        rc = 0.1*self.R500
-        # logL = log(L500/(erg/s))
-        log_L_pred = brentq(f_L500, 30, 70, args=(self, net_cool, rmin, rmax, rc))
-        return np.power(10, log_L_pred)*u.erg/u.s
-
     def L500_analytic(self, mx, s0_factors, mult_agn = 1):
         # calculates predicted L500 for a given mx and sigma0 
 
@@ -457,16 +368,6 @@ class Cluster_werr():
         return np.power(10, logL500) * 1e44
 
 
-    def h_no_L(self, r, r0, rc, q):
-        return (1/(4*np.pi*r**2)
-            *(1-np.exp(-1*r/r0))
-            *np.exp(-1*r/rc)
-            *(1/q))
 
 
 
-def f_L500(logL, nfw, net_cool, rmin, rmax, rc):
-    L = np.power(10, logL)*u.erg/u.s
-    Linj = nfw.get_Linj_from_L500(L=L)
-    heating = nfw.total_heating_rate(rmin, rmax, rc, Linj=Linj).to(u.erg/u.s)
-    return (heating - net_cool).value

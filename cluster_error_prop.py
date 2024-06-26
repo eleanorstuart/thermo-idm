@@ -82,10 +82,11 @@ class Cluster_werr():
     def M_enc(self, r):
         if isinstance(r, float):
             r=r*u.Mpc
+        r = np.array(r)
         ys = r/self.rs
         #print(ys[0])
-        #y_term = (np.log(1+y) - (y/(1+y)))
-        y_term = [(1+y).log() - (y/(1+y)) for y in ys] #gives same output as np.log
+        y_term = (np.log(1+ys) - (ys/(1+ys)))
+        #y_term = [(1+y).log() - (y/(1+y)) for y in ys] #gives same output as np.log
         
         return np.multiply((4 * np.pi * self.rs**3 * self.rho_s), y_term)
 
@@ -116,15 +117,33 @@ class Cluster_werr():
         return self.Pg(r/self.R500)
 
     def dP_dr(self, r): # r has to be a list of rs in Mpc
-        #return [approx_fprime(r, lambda x: self.Pg_r(x), epsilon=r*1e-8)[0] for r in rad]
+        # Convert single value to list and append values if necessary
+        single_value = False
+        if isinstance(r, (int, float, a_u)) or (isinstance(r, list) and len(r) == 1):
+            single_value = True
+            if isinstance(r, list):
+                r = r[0]
+            r = np.array([r - 1e-8, r, r + 1e-8])  # Example adjustment, adjust as needed
+
+
         dPdr = np.gradient(self.Pg_r(r),r )
         grad2 = np.gradient(dPdr, r)
         dPdr_err_pos = np.sqrt((grad2*pos_errors(r))**2)
         dPdr_err_neg = np.sqrt((grad2*neg_errors(r))**2)
-        return [
-            a_u(dPdr[i], dPdr_err_pos[i], dPdr_err_neg[i])
-            for i in range(len(dPdr))
+        #return [
+        #    a_u(dPdr[i], dPdr_err_pos[i], dPdr_err_neg[i])
+        #    for i in range(len(dPdr))
+        #]
+        results = [
+        a_u(dPdr[i], dPdr_err_pos[i], dPdr_err_neg[i])
+        for i in range(len(dPdr))
         ]
+
+        # Remove appended values if input was a single value or list of length 1
+        if single_value:
+            return [results[1]]  # Return the middle value
+        else:
+            return results
 
     # gas profiles
     def rho_g(self, r): # density profile of the baryons in the ICM
@@ -133,13 +152,22 @@ class Cluster_werr():
         G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
         denom = (G*self.M_enc(r))
-        return (num/denom)*(dPdr)*conv#*const.c**2 .to(u.Msun/u.Mpc**3, equivalencies=u.mass_energy())
+        return (num/denom)*np.array(dPdr)*conv#*const.c**2 .to(u.Msun/u.Mpc**3, equivalencies=u.mass_energy())
 
-    def T_g(self, r_value): #r is inputted as float
+    def T_g(self, r_value, gaspari=True): #r is inputted as float
         r=r_value
         mu=0.59 # this comes from Tozzi, check this
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
-        return (mu*(const.m_p.to(u.GeV).value)*self.Pg(r/self.R500)/self.rho_g(r))*conv
+        if gaspari:
+            anchor = self.energies.T500
+            T500 = (mu*(const.m_p.to(u.GeV).value)*self.Pg(self.R500/self.R500)/self.rho_g(self.R500))*conv
+            mult_by = anchor/T500
+        else:
+            mult_by=1
+        T_g = (mu*(const.m_p.to(u.GeV).value)*self.Pg(r/self.R500)/self.rho_g(r))*conv
+        return T_g*mult_by
+
+
 
     # effervescent heating 
     def vol_heating_rate(self, rs, rc, Linj=None):

@@ -44,12 +44,27 @@ class Energies:
         return 2*self.thermal_energy_gaspari/self.abs_potential_energy
     
     @property
-    def is_virialized(self):
+    def virialization_fraction_iqbal(self):
+        return 2*self.thermal_energy/self.abs_potential_energy
+    
+    @property
+    def is_virialized_gaspari(self):
         if self.virialization_fraction_gaspari.value<=1:
             if self.virialization_fraction_gaspari.value + 2*self.virialization_fraction_gaspari.plus >=1:
                 return True
         elif self.virialization_fraction_gaspari.value>=1:
             if self.virialization_fraction_gaspari.value - 2*self.virialization_fraction_gaspari.minus <=1:
+                return True
+        else:
+            return False
+        
+    @property
+    def is_virialized_iqbal(self):
+        if self.virialization_fraction_iqbal.value<=1:
+            if self.virialization_fraction_iqbal.value + 2*self.virialization_fraction_iqbal.plus >=1:
+                return True
+        elif self.virialization_fraction_iqbal.value>=1:
+            if self.virialization_fraction_iqbal.value - 2*self.virialization_fraction_iqbal.minus <=1:
                 return True
         else:
             return False

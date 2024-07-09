@@ -50,3 +50,9 @@ class IqbalHeating:
         elif rc == 0.1*self.R500:
             logLinj = -1.58 + 1.53*np.log10(self.Mvir/(1e14 * u.Msun))
         return np.power(10, logLinj) * 1e45 * u.erg/u.s
+    
+    def get_Linj_from_L500(self, L=None):
+        L500 = L or self.cluster.L500
+        logMbh = 10+0.38*np.log10(L500)#/(1e44*u.erg/u.s))
+        Mbh = np.power(10, logMbh)#*u.Msun
+        return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)))#*u.Msun))

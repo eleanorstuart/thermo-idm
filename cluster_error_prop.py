@@ -110,11 +110,11 @@ class Cluster_werr():
         num = P0*P500
         denom = (np.power(c500*x,gamma) 
               * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))
-        return np.divide(num, denom)
+        return np.divide(num, denom) # returns in erg/cm3
     
 
     def Pg_r(self, r): 
-        return self.Pg(r/self.R500)
+        return self.Pg(r/self.R500) # returns in erg/cm3
 
     def dP_dr(self, r): # r has to be a list of rs in Mpc
         # Convert single value to list and append values if necessary
@@ -123,7 +123,7 @@ class Cluster_werr():
             single_value = True
             if isinstance(r, list):
                 r = r[0]
-            r = np.array([r - 1e-8, r, r + 1e-8])  # Example adjustment, adjust as needed
+            r = np.array([r - 1e-6, r, r + 1e-6])  # Example adjustment, adjust as needed
 
 
         dPdr = np.gradient(self.Pg_r(r),r )
@@ -143,29 +143,29 @@ class Cluster_werr():
         if single_value:
             return [results[1]]  # Return the middle value
         else:
-            return results
+            return results # returns in erg/cm3 /Mpc
 
     # gas profiles
-    def rho_g(self, r): # density profile of the baryons in the ICM
+    def rho_g(self, r): # density profile of the baryons in the ICM, r in Mpc
         dPdr=self.dP_dr(r)
         num = -1*np.power(r, 2)
         G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
         denom = (G*self.M_enc(r))
-        return (num/denom)*np.array(dPdr)*conv#*const.c**2 .to(u.Msun/u.Mpc**3, equivalencies=u.mass_energy())
+        return (num/denom)*np.array(dPdr)*conv # returns in Msun/Mpc3
 
-    def T_g(self, r_value, gaspari=True): #r is inputted as float
+    def T_g(self, r_value, match_gaspari=True): #r is inputted as float
         r=r_value
         mu=0.59 # this comes from Tozzi, check this
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
-        if gaspari:
+        if match_gaspari:
             anchor = self.energies.T500
             T500 = (mu*(const.m_p.to(u.GeV).value)*self.Pg(self.R500/self.R500)/self.rho_g(self.R500))*conv
             mult_by = anchor/T500
         else:
             mult_by=1
         T_g = (mu*(const.m_p.to(u.GeV).value)*self.Pg(r/self.R500)/self.rho_g(r))*conv
-        return T_g*mult_by
+        return T_g*mult_by # returns T_g in GeV
 
 
 
@@ -173,7 +173,7 @@ class Cluster_werr():
     def vol_heating_rate(self, rs, rc, Linj=None):
         r0=(0.015*self.R500)#.to(u.Mpc)
         q_factor = self.heating.q(r0, rc)
-        L = Linj or self.get_Linj_from_L500() #Linj or self.Linj(rc)
+        L = Linj or self.heating.get_Linj_from_L500() #Linj or self.Linj(rc)
 
         hs = self.heating.h(L, rs, r0, rc, q_factor)
         Pgs = self.Pg(rs/self.R500)
@@ -197,11 +197,7 @@ class Cluster_werr():
         return trapezoid(integrand, rs)
 
 
-    def get_Linj_from_L500(self, L=None):
-        L500 = L or self.L500
-        logMbh = 10+0.38*np.log10(L500)#/(1e44*u.erg/u.s))
-        Mbh = np.power(10, logMbh)#*u.Msun
-        return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)))#*u.Msun))
+
 
     # gaspari agn heating
     def get_Mbh(self, L=None):
@@ -217,13 +213,13 @@ class Cluster_werr():
         ).to(u.GeV) / baryon_number_density ** (adiabatic_idx - 1)    
 
     # radiative cooling rate
-    def vol_cooling_rate(self, r):
+    def vol_cooling_rate(self, r, match_gaspari=True):
         mu_h=1.26
         mu_e=1.14
         conv = (u.Mpc/u.cm).to(1)
-        return (np.multiply((self.n_e(r)/conv**3)**2, self.cooling_function(r)) * mu_e/mu_h)#.to(u.erg/(u.s*u.cm**3))
+        return (np.multiply((self.n_e(r)/conv**3)**2, self.cooling_function(r, match_gaspari=match_gaspari)) * mu_e/mu_h)#.to(u.erg/(u.s*u.cm**3))
 
-    def total_cooling_rate(self, rmin, rmax, n=50):
+    def total_cooling_rate(self, rmin, rmax, n=50, match_gaspari=True, vol_rate = 'iqbal'):
         #log_rmin = np.log10(rmin)
         #log_rmax = np.log10(rmax)
         #rs = np.logspace(log_rmin, log_rmax, num=n)
@@ -232,22 +228,39 @@ class Cluster_werr():
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
         rs = xs*self.R500
 
+        if vol_rate=='iqbal':
+            volume_cooling_rate = self.vol_cooling_rate(rs, match_gaspari=match_gaspari)
+        elif vol_rate == 'gfe':
+            volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(self, rs, match_gaspari=match_gaspari)
+
+
         integrand = (4 * np.pi * np.multiply(
-            self.vol_cooling_rate(rs), 
+            volume_cooling_rate, 
             np.power(rs, 2))*(u.Mpc/u.cm).to(1)**3)
         return trapezoid(integrand, rs)
 
-    def cooling_function(self, r):
+    def cooling_function(self, r, match_gaspari=True):
         alpha=-1.7
         beta=0.5
         c1 = 8.6*1e-25# * u.erg*u.cm**3/u.s * u.keV**(-alpha)
         c2= 5.8*1e-24#*u.erg*u.cm**3/u.s * u.keV**(-beta)
         c3=6.3*1e-24#*u.erg*u.cm**3/u.s
         conv = (u.GeV/u.keV).to(1)
-        return (c1*(self.T_g(r)*conv)**alpha + c2*(self.T_g(r)*conv)**beta + c3)#.to(u.erg*u.cm**3/u.s)
+        return (c1*(self.T_g(r, match_gaspari=match_gaspari)*conv)**alpha + c2*(self.T_g(r, match_gaspari=match_gaspari)*conv)**beta + c3)#.to(u.erg*u.cm**3/u.s)
 
     def n_e(self, r):
-        return np.sqrt(0.704)*(self.rho_g(r)/(const.m_p).to(u.Msun).value)
+        return np.sqrt(0.704)*(self.rho_g(r)/(const.m_p).to(u.Msun).value) # returns in 1/Mpc3
+    
+    def vol_radiative_cooling_rate_gfe(self, r, match_gaspari=True):
+        prefactors=6.8*1e-38 #*u.erg*u.cm**3
+        #conv = 
+        Tk=self.T_g(r, match_gaspari=match_gaspari)*u.GeV.to(u.K, equivalencies=u.temperature_energy()) # convert T from GeV to K
+        ncm=self.n_e(r)/((u.Mpc/u.cm).to(1)**3)
+
+        #C=(prefactors*Z**2*(self.measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
+        #Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
+        #return (self.measurements.volume*Eff_int).to(u.erg/u.s)
+        return prefactors * np.sqrt(Tk) *ncm**2 *(const.k_B/const.h).value # returns in erg/s /cm3
 
     # DM cooling
     def virial_temperature(self, r, m_chi, f_chi=1, m_psi=0.1 * u.GeV,):

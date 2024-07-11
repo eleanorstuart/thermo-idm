@@ -450,7 +450,9 @@ class Cluster_werr():
         L_solution = brentq(equation, 1e40, 1e50)
         L_lower=brentq(equation_upper, 1e40, 1e50)
         L_upper=brentq(equation_lower, 1e40, 1e50)
-        return L_solution, L_upper, L_lower
+        # could do L_upper - L_lower / 2 but I want to be generous with the error bars
+        L_var = np.max([L_upper - L_solution, L_solution - L_lower])
+        return L_solution, L_var
         
 
 

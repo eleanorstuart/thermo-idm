@@ -29,30 +29,30 @@ class IqbalHeating:
         return integral#*(u.erg**(1/4) * u.cm**(-3/4))
     
     def integrand(self, r, r0, rc):
-        x=r/self.R500
-        intgrd=(((self.Pg(x))**((gamma_b-1)/gamma_b))#.to(u.erg**(1/4)*u.cm**(-3/4))
-               *(1/self.Pg(x))#.to(u.cm**3/u.erg) 
-               *self.dP_dr(r)#.to(u.erg/(u.cm**3 * u.Mpc))
+        x=r/self.cluster.R500
+        intgrd=(((self.cluster.Pg(x))**((gamma_b-1)/gamma_b))#.to(u.erg**(1/4)*u.cm**(-3/4))
+               *(1/self.cluster.Pg(x))#.to(u.cm**3/u.erg) 
+               *self.cluster.dP_dr(r)#.to(u.erg/(u.cm**3 * u.Mpc))
                *(1-np.exp(-1*r/r0))#.to(1)
                *(np.exp(-1*r/rc)))#.to(1))
         return intgrd#.to(u.erg**(1/4) * u.cm**(-3/4) *u.Mpc**(-1)).value
     
 
     def h(self, Linj, r, r0, rc, q):
-        return (Linj/(4*np.pi*r**2)
+        return (np.divide(Linj,(4*np.pi*r**2))
             *(1-np.exp(-1*r/r0))
             *np.exp(-1*r/rc)
             *(1/q))
     
     def Linj(self, rc):
-        if rc == 0.3*self.R500:
+        if rc == 0.3*self.cluster.R500:
             logLinj = -0.96 + 1.73*np.log10(self.Mvir/(1e14 * u.Msun))
-        elif rc == 0.1*self.R500:
+        elif rc == 0.1*self.cluster.R500:
             logLinj = -1.58 + 1.53*np.log10(self.Mvir/(1e14 * u.Msun))
         return np.power(10, logLinj) * 1e45 * u.erg/u.s
     
     def get_Linj_from_L500(self, L=None):
-        L500 = L or self.cluster.L500
-        logMbh = 10+0.38*np.log10(L500)#/(1e44*u.erg/u.s))
+        L500 = (L if L is not None else self.cluster.L500)/1e44
+        logMbh = a_u(10, 0.11, 0.11)+a_u(0.38, 0.03, 0.03)*np.log10(L500)#/(1e44*u.erg/u.s))
         Mbh = np.power(10, logMbh)#*u.Msun
-        return 1e44*u.erg/u.s * (Mbh/(np.power(10, 9.5)))#*u.Msun))
+        return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))

@@ -49,8 +49,11 @@ class Cluster_werr():
         else:
             raise ValueError("Provide M500")
 
+        self.energies=Energies(self)
+        self.heating=IqbalHeating(self)
+
         # calculations to make L500_analytic faster
-        rmin = rmin*self.R500 if rmin else 0.0001*self.R500
+        rmin = rmin*self.R500 if rmin else 0.001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
 
@@ -61,7 +64,10 @@ class Cluster_werr():
         xmax = rmax.value/self.R500.value
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
         rs = xs*self.R500
-        self.Tbs = np.asarray(self.T_g(rs)) 
+        self.Tbs = np.asarray(self.T_g(rs, match_gaspari=True))
+        self.T500=self.Tbs[-1]
+        self.Tbs_norm = self.Tbs/self.T500
+
         self.Tx_by_mx = np.asarray(self.Tx_over_mx(rs))
         with u.set_enabled_equivalencies(u.mass_energy()):
             uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_by_mx)
@@ -70,8 +76,7 @@ class Cluster_werr():
 
         self.rvals = rs * Mpc_to_cm
         
-        self.energies=Energies(self)
-        self.heating=IqbalHeating(self)
+
 
     # profile properties
     def get_rho_s(self, overdensity, concentration):
@@ -130,10 +135,7 @@ class Cluster_werr():
         grad2 = np.gradient(dPdr, r)
         dPdr_err_pos = np.sqrt((grad2*pos_errors(r))**2)
         dPdr_err_neg = np.sqrt((grad2*neg_errors(r))**2)
-        #return [
-        #    a_u(dPdr[i], dPdr_err_pos[i], dPdr_err_neg[i])
-        #    for i in range(len(dPdr))
-        #]
+
         results = [
         a_u(dPdr[i], dPdr_err_pos[i], dPdr_err_neg[i])
         for i in range(len(dPdr))
@@ -159,7 +161,7 @@ class Cluster_werr():
         mu=0.59 # this comes from Tozzi, check this
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
         if match_gaspari:
-            anchor = self.energies.T500
+            anchor = self.energies.T500()
             T500 = (mu*(const.m_p.to(u.GeV).value)*self.Pg(self.R500/self.R500)/self.rho_g(self.R500))*conv
             mult_by = anchor/T500
         else:
@@ -188,15 +190,10 @@ class Cluster_werr():
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
         rs = xs*self.R500
 
-        #log_rmin = np.log10(rmin.value)
-        #log_rmax = np.log10(rmax.value)
-        #rs = np.logspace(log_rmin, log_rmax, num=n)*u.Mpc
         integrand = 4 * np.pi * np.multiply(
             self.vol_heating_rate(rs, rc, Linj=Linj), 
             np.power(rs, 2)) * (u.Mpc**3/u.cm**3).to(1)
         return trapezoid(integrand, rs)
-
-
 
 
     # gaspari agn heating
@@ -219,10 +216,7 @@ class Cluster_werr():
         conv = (u.Mpc/u.cm).to(1)
         return (np.multiply((self.n_e(r)/conv**3)**2, self.cooling_function(r, match_gaspari=match_gaspari)) * mu_e/mu_h)#.to(u.erg/(u.s*u.cm**3))
 
-    def total_cooling_rate(self, rmin, rmax, n=50, match_gaspari=True, vol_rate = 'iqbal'):
-        #log_rmin = np.log10(rmin)
-        #log_rmax = np.log10(rmax)
-        #rs = np.logspace(log_rmin, log_rmax, num=n)
+    def total_cooling_rate(self, rmin, rmax, n=50, match_gaspari=True, vol_rate = 'iqbal', Tb=None):
         xmin = rmin.value/self.R500.value
         xmax = rmax.value/self.R500.value
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=n)
@@ -231,7 +225,7 @@ class Cluster_werr():
         if vol_rate=='iqbal':
             volume_cooling_rate = self.vol_cooling_rate(rs, match_gaspari=match_gaspari)
         elif vol_rate == 'gfe':
-            volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(self, rs, match_gaspari=match_gaspari)
+            volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(rs, match_gaspari=match_gaspari, Tb=None)
 
 
         integrand = (4 * np.pi * np.multiply(
@@ -251,15 +245,12 @@ class Cluster_werr():
     def n_e(self, r):
         return np.sqrt(0.704)*(self.rho_g(r)/(const.m_p).to(u.Msun).value) # returns in 1/Mpc3
     
-    def vol_radiative_cooling_rate_gfe(self, r, match_gaspari=True):
+    def vol_radiative_cooling_rate_gfe(self, r, match_gaspari=True, Tb=None):
         prefactors=6.8*1e-38 #*u.erg*u.cm**3
-        #conv = 
+        Tbs = Tb if Tb is not None else self.T_g(r, match_gaspari=match_gaspari)
         Tk=self.T_g(r, match_gaspari=match_gaspari)*u.GeV.to(u.K, equivalencies=u.temperature_energy()) # convert T from GeV to K
         ncm=self.n_e(r)/((u.Mpc/u.cm).to(1)**3)
 
-        #C=(prefactors*Z**2*(self.measurements.n_e.to(u.cm**-3))**2)/(T8**(1/2))
-        #Eff_int = (C*T*const.k_B/const.h).to(u.GeV/(u.s*u.cm**3))
-        #return (self.measurements.volume*Eff_int).to(u.erg/u.s)
         return prefactors * np.sqrt(Tk) *ncm**2 *(const.k_B/const.h).value # returns in erg/s /cm3
 
     # DM cooling
@@ -267,10 +258,10 @@ class Cluster_werr():
         conv = (u.Msun/u.kg).to(1)
         M = self.M_enc(r)
         M_kg = self.M_enc(r) * conv
-        frac = f_chi / m_chi.value + (1 - f_chi) / m_psi.value
+        frac = f_chi / m_chi+ (1 - f_chi) / m_psi.value
         G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
         #M_kg = M.to(u.kg, equivalencies=u.mass_energy())
-        print(r)
+        #print(r)
         return (0.3 * G * M / (r * frac))#.to(u.GeV)
 
     def Tx_over_mx(self, r):
@@ -283,16 +274,16 @@ class Cluster_werr():
         return (0.3 * G * M / (r))#.to(u.GeV)
 
 
-    def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
-        T_b = self.T_g(r)
+    def vol_dm_cooling_rate(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, Tb = None):
+        T_b = Tb if Tb is not None else self.Tbs
         T_chi = self.virial_temperature(r, m_chi)
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(T_b / (const.m_p.to(u.GeV)).value + T_chi / m_chi.value)
+            uth = np.sqrt(T_b / (const.m_p.to(u.GeV)).value + T_chi / m_chi)
         rho_chi = self.rho_tot(r) * f_chi
         conv_dens = (u.Msun/u.Mpc**3).to(u.erg/u.cm**3)
         conv_T = (u.GeV/u.erg).to(1)
 
-        denominator = ((m_chi.value + const.m_p.to(u.GeV).value) ** 2)
+        denominator = ((m_chi + const.m_p.to(u.GeV).value) ** 2)
         numerator = (
                 3
                 * (T_b - T_chi)/conv_T
@@ -301,12 +292,12 @@ class Cluster_werr():
                 * c(n)
                 * uth ** (n + 1)
                 * (const.c.to(u.cm / u.s)).value
-                * s0.value
+                * s0
         
             )
         return (numerator / denominator)#.to(u.erg/(u.s*u.cm**3))
 
-    def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV):
+    def integrated_dm_cooling_rate(self, rmin, rmax, s0, m_chi, num = 50, n=0, f_chi=1, m_psi=0.1*u.GeV, Tb=None):
         #log_rmin = np.log10(rmin)
         #log_rmax = np.log10(rmax)
         xmin = rmin.value/self.R500.value
@@ -320,7 +311,7 @@ class Cluster_werr():
 
 
         integrand = (4 * np.pi * np.multiply(
-            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi)*(u.Mpc/u.cm).to(1)**3, np.power(rs, 2)))
+            self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=Tb)*(u.Mpc/u.cm).to(1)**3, np.power(rs, 2)))
         #print(integrand[0])
         return np.trapz(integrand, rs)
 
@@ -337,15 +328,18 @@ class Cluster_werr():
         return (10**(47.5) * self.get_Mbh()/(10**(9.5)))
 
 
-    def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV):
+    def calculate_s0_integrand(self,r,  m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, Tb = None):
         rho_chi = self.rho_tot(r) #* f_chi
+
+
+        Tbs = Tb if Tb is not None else self.Tbs
         with u.set_enabled_equivalencies(u.mass_energy()):
-            uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value +self.Tx_by_mx)#+ self.virial_temperature(r, m_chi) / m_chi).to(1)
+            uth = np.sqrt(Tbs / const.m_p.to(u.GeV).value +self.Tx_by_mx)#+ self.virial_temperature(r, m_chi) / m_chi).to(1)
         #conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
         #self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
         return (
             3
-            * (self.Tbs - self.Tx_by_mx * m_chi.value)#self.virial_temperature(r, m_chi)).to(u.erg)
+            * (Tbs - self.Tx_by_mx * m_chi.value)#self.virial_temperature(r, m_chi)).to(u.erg)
             #* rho_chi*(u.Msun/u.Mpc**3).to(u.GeV / u.cm**3)
             #* self.rho_g(r).to(u.GeV / u.cm**3, equivalencies=u.mass_energy())
             *self.dm_rdep_factors
@@ -409,6 +403,62 @@ class Cluster_werr():
         return np.power(10, logL500) * 1e44
 
 
+    def L500_numerical(self, mx, s0):
+        rmin=0.001*self.R500
+        rmax=self.R500
+        rc=0.1*self.R500
+        def equation(L):
+            T500 = self.energies.T500(L)
+            Tbs = np.multiply(self.Tbs_norm, T500)
+            Linj=self.heating.get_Linj_from_L500(L)
+
+            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
+            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
+        
+        def equation_upper(L):
+            T500 = self.energies.T500(L)
+            Tbs = np.multiply(self.Tbs_norm, T500)
+            Linj=self.heating.get_Linj_from_L500(L)
+
+            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
+            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+
+            heating_upper = heating_rate.value + heating_rate.plus
+            cooling_lower = cooling_rate.value - cooling_rate.minus
+            dm_cooling_lower = dm_cooling_rate.value - dm_cooling_rate.minus
+            return heating_upper - cooling_lower - dm_cooling_lower
+
+        def equation_lower(L):
+            T500 = self.energies.T500(L)
+            Tbs = np.multiply(self.Tbs_norm, T500)
+            Linj=self.heating.get_Linj_from_L500(L)
+
+            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
+            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+
+            heating_lower = heating_rate.value - heating_rate.minus
+            cooling_upper = cooling_rate.value + cooling_rate.plus
+            dm_cooling_upper = dm_cooling_rate.value + dm_cooling_rate.plus
+            return heating_lower - cooling_upper - dm_cooling_upper
+
+
+        L_solution = brentq(equation, 1e40, 1e50)
+        L_lower=brentq(equation_upper, 1e40, 1e50)
+        L_upper=brentq(equation_lower, 1e40, 1e50)
+        return L_solution, L_upper, L_lower
+        
 
 
 
+
+
+def temp_from_luminosity(luminosity):
+    lum = luminosity.to(u.erg / u.s)
+    log_T = (np.log10(lum.value) - 45.06) / 2.88 + np.log10(6)
+    T = np.power(10, log_T) * u.keV
+    return T.to(u.GeV)

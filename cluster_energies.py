@@ -26,11 +26,11 @@ class Energies:
         mp_GeV = (const.m_p).to(u.GeV).value
         return  3./2*G*mu*mp_GeV*self.cluster.M500/self.cluster.R500
     
-    @property
-    def T500(self):
+    def T500(self, L=None):
+        L500 = L if L is not None else self.cluster.L500
         b = a_u(-2.34, 0.09, 0.09)
         m = a_u(4.71, 0.26, 0.26)
-        logL = np.log10(self.cluster.L500)
+        logL = np.log10(L500)
         logT = (logL - b)/m
         return np.power(10, logT) * 1e-6 # in GeV
     

@@ -52,7 +52,7 @@ class IqbalHeating:
         return np.power(10, logLinj) * 1e45 * u.erg/u.s
     
     def get_Linj_from_L500(self, L=None):
-        L500 = (L if L is not None else self.cluster.L500)/1e44
+        L500 = (L if L is not None else self.cluster.L500*1e44)/1e44
         logMbh = a_u(10, 0.11, 0.11)+a_u(0.38, 0.03, 0.03)*np.log10(L500)#/(1e44*u.erg/u.s))
         Mbh = np.power(10, logMbh)#*u.Msun
         return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))

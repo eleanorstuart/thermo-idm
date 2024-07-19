@@ -36,7 +36,7 @@ class Energies:
     
     @property
     def thermal_energy_gaspari(self):
-        return 3./2 * self.T500
+        return 3./2 * self.T500()
     
 
     @property

@@ -66,7 +66,9 @@ class Cluster_werr():
         rs = xs*self.R500
         self.Tbs = np.asarray(self.T_g(rs, match_gaspari=True))
         self.T500=self.Tbs[-1]
-        self.Tbs_norm = self.Tbs/self.T500
+        self.Tbs_norm = self.Tbs/(self.T500*u.GeV.to(u.K, equivalencies=u.temperature_energy()))
+
+        self.rad_factors = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)# radiative cooling but needs to be multiplied by T500^1/2
 
         self.Tx_by_mx = np.asarray(self.Tx_over_mx(rs))
         with u.set_enabled_equivalencies(u.mass_energy()):
@@ -176,11 +178,9 @@ class Cluster_werr():
         r0=(0.015*self.R500)#.to(u.Mpc)
         q_factor = self.heating.q(r0, rc)
         L = Linj or self.heating.get_Linj_from_L500() #Linj or self.Linj(rc)
-
         hs = self.heating.h(L, rs, r0, rc, q_factor)
         Pgs = self.Pg(rs/self.R500)
         dPgdrs = self.dP_dr(rs)
-
         return(hs*Pgs**((gamma_b-1)/gamma_b))*(1./Pgs)*dPgdrs * (u.cm**3/u.Mpc**3).to(1)
 
 
@@ -225,7 +225,7 @@ class Cluster_werr():
         if vol_rate=='iqbal':
             volume_cooling_rate = self.vol_cooling_rate(rs, match_gaspari=match_gaspari)
         elif vol_rate == 'gfe':
-            volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(rs, match_gaspari=match_gaspari, Tb=None)
+            volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(rs, match_gaspari=match_gaspari, Tb=Tb)
 
 
         integrand = (4 * np.pi * np.multiply(
@@ -248,7 +248,7 @@ class Cluster_werr():
     def vol_radiative_cooling_rate_gfe(self, r, match_gaspari=True, Tb=None):
         prefactors=6.8*1e-38 #*u.erg*u.cm**3
         Tbs = Tb if Tb is not None else self.T_g(r, match_gaspari=match_gaspari)
-        Tk=self.T_g(r, match_gaspari=match_gaspari)*u.GeV.to(u.K, equivalencies=u.temperature_energy()) # convert T from GeV to K
+        Tk=Tbs*u.GeV.to(u.K, equivalencies=u.temperature_energy()) # convert T from GeV to K
         ncm=self.n_e(r)/((u.Mpc/u.cm).to(1)**3)
 
         return prefactors * np.sqrt(Tk) *ncm**2 *(const.k_B/const.h).value # returns in erg/s /cm3
@@ -407,52 +407,61 @@ class Cluster_werr():
         rmin=0.001*self.R500
         rmax=self.R500
         rc=0.1*self.R500
-        def equation(L):
-            T500 = self.energies.T500(L)
-            Tbs = np.multiply(self.Tbs_norm, T500)
+
+        #T500 = self.energies.T500(8e43/1e44)
+        #T500k = T500*u.GeV.to(u.K, equivalencies=u.temperature_energy())
+        #print(T500)
+        #print(np.sqrt(T500k)*self.rad_factors)
+
+
+        def calculate_heating_cooling_rates(L):
+            T500 = self.energies.T500(L/1e44)
+            T500k = T500*u.GeV.to(u.K, equivalencies=u.temperature_energy())
+            #Tbs = np.multiply(self.Tbs_norm, T500k)
+            #T500_iq = self.Tbs[-1]
             Linj=self.heating.get_Linj_from_L500(L)
 
-            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+            #cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+            cooling_rate=np.sqrt(T500k)*self.rad_factors
+            #print(cooling_rate)
             dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
-            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+            #heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+            heating_rate = Linj * self.agn_factors
 
-            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
+            return heating_rate, cooling_rate, dm_cooling_rate
+
+        def equation(L):
+            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
+
+            return heating.value - cooling.value - dm_cooling.value
         
         def equation_upper(L):
-            T500 = self.energies.T500(L)
-            Tbs = np.multiply(self.Tbs_norm, T500)
-            Linj=self.heating.get_Linj_from_L500(L)
+            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
 
-            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
-            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
-            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
-
-            heating_upper = heating_rate.value + heating_rate.plus
-            cooling_lower = cooling_rate.value - cooling_rate.minus
-            dm_cooling_lower = dm_cooling_rate.value - dm_cooling_rate.minus
+            heating_upper = heating.value + heating.plus
+            cooling_lower = cooling.value - cooling.minus
+            dm_cooling_lower = dm_cooling.value - dm_cooling.minus
             return heating_upper - cooling_lower - dm_cooling_lower
 
         def equation_lower(L):
-            T500 = self.energies.T500(L)
-            Tbs = np.multiply(self.Tbs_norm, T500)
-            Linj=self.heating.get_Linj_from_L500(L)
+            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
 
-            cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
-            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
-            heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
-
-            heating_lower = heating_rate.value - heating_rate.minus
-            cooling_upper = cooling_rate.value + cooling_rate.plus
-            dm_cooling_upper = dm_cooling_rate.value + dm_cooling_rate.plus
+            heating_lower = heating.value - heating.minus
+            cooling_upper = cooling.value + cooling.plus
+            dm_cooling_upper = dm_cooling.value + dm_cooling.plus
             return heating_lower - cooling_upper - dm_cooling_upper
 
 
-        L_solution = brentq(equation, 1e40, 1e50)
-        L_lower=brentq(equation_upper, 1e40, 1e50)
-        L_upper=brentq(equation_lower, 1e40, 1e50)
+        #L_solution = brentq(equation, 1e40, 1e50)
+        #L_lower=brentq(equation_upper, L_solution/10, L_solution)
+        #L_upper=brentq(equation_lower, L_solution, 10*L_solution)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
-        L_var = np.max([L_upper - L_solution, L_solution - L_lower])
-        return L_solution, L_var
+        #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
+        #return L_solution, L_var
+
+        Ls = np.logspace(40, 50)
+        net_heating_rate = [equation(L) for L in Ls]
+        return net_heating_rate
         
 
 

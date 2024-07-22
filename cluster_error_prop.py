@@ -28,6 +28,7 @@ gamma_b=4./3.
 c0 = c(0) * (const.c.to(u.cm / u.s)).value
 mp_GeV = (const.m_p).to(u.GeV).value
 GeV_to_erg = (u.GeV).to(u.erg)
+GeV_to_K = u.GeV.to(u.K, equivalencies=u.temperature_energy())
 Mpc_to_cm = (u.Mpc).to(u.cm)
 
 # nfw profile class
@@ -75,6 +76,31 @@ class Cluster_werr():
             uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_by_mx)
             conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
             self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
+
+
+        def D(r): # calculates the part of DM cooling that isnt dependent on L500 or sigma0 or mx
+            f_chi=1
+            rho_chi = self.rho_tot(r) * f_chi
+            conv_dens = (u.Msun/u.Mpc**3).to(u.erg/u.cm**3)
+            
+            num = (
+                3 * rho_chi*conv_dens#.to(u.GeV/u.cm**3)
+                * self.rho_g(r)*conv_dens#.to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
+                * c(0)
+                * (const.c.to(u.cm / u.s)).value
+                #* s0
+                * 4 * np.pi * np.power(r, 2)
+            )
+            #denom= ((mx + const.m_p.to(u.GeV).value) ** 2)
+            #return np.divide(num, denom)
+            return num
+        conv_T = (u.GeV/u.erg).to(1)
+        self.L_indep_factors = np.array(D(rs)*(u.Mpc/u.cm).to(1)**3)/conv_T
+        self.rs_Mpc = rs
+        
+        #T_chi = self.virial_temperature(rs, mx)
+        
+
 
         self.rvals = rs * Mpc_to_cm
         
@@ -279,6 +305,7 @@ class Cluster_werr():
         T_chi = self.virial_temperature(r, m_chi)
         with u.set_enabled_equivalencies(u.mass_energy()):
             uth = np.sqrt(T_b / (const.m_p.to(u.GeV)).value + T_chi / m_chi)
+
         rho_chi = self.rho_tot(r) * f_chi
         conv_dens = (u.Msun/u.Mpc**3).to(u.erg/u.cm**3)
         conv_T = (u.GeV/u.erg).to(1)
@@ -404,38 +431,46 @@ class Cluster_werr():
 
 
     def L500_numerical(self, mx, s0):
-        rmin=0.001*self.R500
-        rmax=self.R500
-        rc=0.1*self.R500
-
-        #T500 = self.energies.T500(8e43/1e44)
-        #T500k = T500*u.GeV.to(u.K, equivalencies=u.temperature_energy())
-        #print(T500)
-        #print(np.sqrt(T500k)*self.rad_factors)
-
+        L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
+        T_chi = self.Tx_by_mx*mx
 
         def calculate_heating_cooling_rates(L):
             T500 = self.energies.T500(L/1e44)
-            T500k = T500*u.GeV.to(u.K, equivalencies=u.temperature_energy())
-            #Tbs = np.multiply(self.Tbs_norm, T500k)
+            T500k = T500*GeV_to_K
+            Tbs = np.multiply(self.Tbs_norm, T500k)
+            #print(self.Tbs_norm[-1])
             #T500_iq = self.Tbs[-1]
             Linj=self.heating.get_Linj_from_L500(L)
 
             #cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
             cooling_rate=np.sqrt(T500k)*self.rad_factors
             #print(cooling_rate)
-            dm_cooling_rate = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx)
+
+            #dm_cooling_rate1 = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx, Tb=Tbs)
+            #print(dm_cooling_rate1)
+            #T_b = 
+
+            uth = np.sqrt(Tbs/ mp_GeV + self.Tx_by_mx)
+
+            #print(Tbs, T_chi)
+            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+            dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
+            #print(dm_cooling_rate)
+
+
             #heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
             heating_rate = Linj * self.agn_factors
+            #print(dm_cooling_rate1, dm_cooling_rate)
+            return heating_rate, cooling_rate, dm_cooling_rate#, dm_cooling_rate1
 
-            return heating_rate, cooling_rate, dm_cooling_rate
-
-        def equation(L):
+        def equation(logL):
+            L=np.power(10, logL)
             heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
 
             return heating.value - cooling.value - dm_cooling.value
         
-        def equation_upper(L):
+        def equation_upper(logL):
+            L=np.power(10, logL)
             heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
 
             heating_upper = heating.value + heating.plus
@@ -443,7 +478,8 @@ class Cluster_werr():
             dm_cooling_lower = dm_cooling.value - dm_cooling.minus
             return heating_upper - cooling_lower - dm_cooling_lower
 
-        def equation_lower(L):
+        def equation_lower(logL):
+            L=np.power(10, logL)
             heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
 
             heating_lower = heating.value - heating.minus
@@ -452,16 +488,16 @@ class Cluster_werr():
             return heating_lower - cooling_upper - dm_cooling_upper
 
 
-        #L_solution = brentq(equation, 1e40, 1e50)
-        #L_lower=brentq(equation_upper, L_solution/10, L_solution)
-        #L_upper=brentq(equation_lower, L_solution, 10*L_solution)
+        L_solution = brentq(equation, 44, 55)
+        L_lower=brentq(equation_upper, L_solution-1, L_solution)
+        L_upper=brentq(equation_lower, L_solution, L_solution+1)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
         #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
-        #return L_solution, L_var
+        return L_solution, L_lower, L_upper
 
-        Ls = np.logspace(40, 50)
-        net_heating_rate = [equation(L) for L in Ls]
-        return net_heating_rate
+        #Ls = np.logspace(44, 50)
+        #net_heating_rate = [equation(L) for L in Ls]
+        #return net_heating_rate
         
 
 

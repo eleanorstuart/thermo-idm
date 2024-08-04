@@ -61,6 +61,7 @@ class Cluster_werr():
         self.tot_rad = self.total_cooling_rate(rmin, rmax)
         self.agn_factors = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
 
+
         xmin = rmin.value/self.R500.value
         xmax = rmax.value/self.R500.value
         xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
@@ -77,6 +78,15 @@ class Cluster_werr():
             conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
             self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
 
+
+        M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value
+        M500_min = M500.to(u.Msun).value - M500_err_lo.to(u.Msun).value
+        M500_max = M500.to(u.Msun).value + M500_err_hi.to(u.Msun).value
+        self.agn_factors_min = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
+        self.rad_factors_min = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
+
+        self.agn_factors_max = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
+        self.rad_factors_max = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
 
         def D(r): # calculates the part of DM cooling that isnt dependent on L500 or sigma0 or mx
             f_chi=1
@@ -101,7 +111,7 @@ class Cluster_werr():
         #T_chi = self.virial_temperature(rs, mx)
         
 
-
+        self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
         self.rvals = rs * Mpc_to_cm
         
 

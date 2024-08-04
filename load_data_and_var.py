@@ -11,15 +11,18 @@ def load_data_and_var():
     # this dataset contains the cluster properties (L500, M500, z, etc)
     with open('data/mcxc_psz_combined.pkl', 'rb') as f:
         comb_data = pickle.load(f)
+    low_z_data = comb_data[comb_data['z_y'] < 0.2][comb_data['Sub-Cat']=='REFLEX'][['OName','AName', 'L500', 'z_y']].rename(columns={'AName': 'Name'}).dropna()
     # this file contains the variances on the L500 measurements
-    with open('data/REFLEX.p', 'rb') as g:
-        errors_dict = pickle.load(g)
+    #with open('data/REFLEX.p', 'rb') as g:
+    #    errors_dict = pickle.load(g)
+    with open('data/REFLEX_lowz_errs.p', 'wb') as g:
+        lowz_errors = pickle.load(g)
 
     # link the variances with the associated clusters
-    reflex_data = comb_data[comb_data['Sub-Cat']=='REFLEX']
-    reflex_appended = reflex_data.copy()
-    reflex_appended['L_err'] = reflex_appended['OName'].apply(lambda x: errors_dict.get(x))
-    reflex_clean = reflex_appended[reflex_appended['L_err'].notna()]
+    #reflex_data = comb_data[comb_data['Sub-Cat']=='REFLEX']
+    lowz_appended = low_z_data.copy()
+    lowz_appended['L_err'] = lowz_appended['OName'].apply(lambda x: lowz_errors.get(x))
+    reflex_clean = lowz_appended[lowz_appended['L_err'].notna()]
 
     L_err_list = reflex_clean['L_err'].tolist()
     variances = (np.array(L_err_list)*1e37*u.W).to(1e44*u.erg/u.s)

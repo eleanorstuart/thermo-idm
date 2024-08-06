@@ -11,11 +11,17 @@ def load_data_and_var():
     # this dataset contains the cluster properties (L500, M500, z, etc)
     with open('data/mcxc_psz_combined.pkl', 'rb') as f:
         comb_data = pickle.load(f)
-    low_z_data = comb_data[comb_data['z_y'] < 0.2][comb_data['Sub-Cat']=='REFLEX'][['OName','AName', 'L500', 'z_y']].rename(columns={'AName': 'Name'}).dropna()
+    low_z_data = comb_data[comb_data['z_y'] < 0.2][comb_data['Sub-Cat']=='REFLEX'][['OName',
+                                                                                    'AName',
+                                                                                    'L500', 
+                                                                                    'z_y', 
+                                                                                    'MSZ', 
+                                                                                    'e_MSZ', 
+                                                                                    'E_MSZ']].rename(columns={'AName': 'Name'}).dropna()
     # this file contains the variances on the L500 measurements
     #with open('data/REFLEX.p', 'rb') as g:
     #    errors_dict = pickle.load(g)
-    with open('data/REFLEX_lowz_errs.p', 'wb') as g:
+    with open('data/REFLEX_lowz_errs.p', 'rb') as g:
         lowz_errors = pickle.load(g)
 
     # link the variances with the associated clusters

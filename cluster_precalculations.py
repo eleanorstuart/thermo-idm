@@ -36,7 +36,7 @@ class PreCalculations:
                                                            a_u(R500_min), 
                                                            rc_min, 
                                                            Linj = 1*u.erg/u.s, 
-                                                           n=50)).to(u.erg/u.s).value
+                                                           n=50)).to(u.erg/u.s).value.value
 
         xs = np.logspace(-3, 0, num=50)
         self.rs_min = xs*self.cluster.R500
@@ -47,7 +47,7 @@ class PreCalculations:
         self.rad_factors_min = cluster.total_cooling_rate(a_u(r0_min), 
                                                           a_u(R500_min), 
                                                           vol_rate='gfe', 
-                                                          Tb=self.Tbs_norm_min)
+                                                          Tb=self.Tbs_norm_min).value
         
         self.L_indep_factors_min = np.array(self.D(self.rs_min)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg
         self.Tx_by_mx_min = np.asarray(cluster.Tx_over_mx(self.rs_min))
@@ -65,7 +65,7 @@ class PreCalculations:
                                                            a_u(R500_max), 
                                                            rc_max, 
                                                            Linj = 1*u.erg/u.s, 
-                                                           n=50)).to(u.erg/u.s).value
+                                                           n=50)).to(u.erg/u.s).value.value
 
         self.rs_max = xs*self.cluster.R500
 
@@ -75,7 +75,7 @@ class PreCalculations:
         self.rad_factors_max = cluster.total_cooling_rate(a_u(r0_max), 
                                                           a_u(R500_max), 
                                                           vol_rate='gfe', 
-                                                          Tb=self.Tbs_norm_max)
+                                                          Tb=self.Tbs_norm_max).value
         
         self.L_indep_factors_max = np.array(self.D(self.rs_max)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg
         self.Tx_by_mx_max = np.asarray(cluster.Tx_over_mx(self.rs_max))

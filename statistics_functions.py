@@ -14,7 +14,7 @@ GeV_to_erg = (u.GeV).to(u.erg)
 
 def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
     # TODO: add second source of variance
-    total_var = variance**2 + add_var**2
+    total_var = 1#variance**2 + add_var**2
     #return sum((model[i]-data[i].value)**2/(total_var[i]) for i in range(len(data)))
     return np.sum((model - data)**2 / total_var)
 
@@ -55,7 +55,7 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     #print(predicted)
     #print(variances_pred)
     #predicted = np.array([p.value for p in predicted_werr])
-    print(predicted, obs)
+    #print(predicted, obs)
 
     X2 = chi_squared(predicted, obs, variances_obs, add_var=variances_pred)
     return -X2/2

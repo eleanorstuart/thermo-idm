@@ -12,6 +12,7 @@ from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 from cluster_functions import c
 from cluster_energies import Energies
 from cluster_iqbal_heating import IqbalHeating
+from cluster_precalculations import PreCalculations
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -20,7 +21,7 @@ cosmo=FlatLambdaCDM(70, 0.3)
 h=0.7
 h70=1
 P0=6.85
-c500=1.09
+c500_const=1.09
 gamma=0.31
 alpha=1.07
 beta=5.46
@@ -38,27 +39,29 @@ class Cluster_werr():
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
         self.L500=L500
-        self.L_err = L_err.value
+        
         if L_err!=None:
             self.L500 = a_u(self.L500.value, L_err.value, L_err.value)
+            self.L_err = L_err.value
         if M500!=None: 
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47)) #this is an estimate from c200
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * (self.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
-            self.rs = self.R500/self.c500
-            self.rho_s = self.get_rho_s(500., self.c500)
+            self.scale_radius = self.R500/self.c500
+            #self.rho_s = self.get_rho_s(500., self.c500)
         else:
             raise ValueError("Provide M500")
 
         self.energies=Energies(self)
         self.heating=IqbalHeating(self)
+        self.precalc=PreCalculations(self)
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.001*self.R500
         rmax = self.R500
         rc = 0.1*self.R500
 
-        self.tot_rad = self.total_cooling_rate(rmin, rmax)
+        #self.tot_rad = self.total_cooling_rate(rmin, rmax)
         self.agn_factors = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
 
 
@@ -77,16 +80,6 @@ class Cluster_werr():
             uth = np.sqrt(self.Tbs / const.m_p.to(u.GeV).value + self.Tx_by_mx)
             conv = (u.Msun/u.Mpc**3).to(u.GeV/u.cm**3, equivalencies=u.mass_energy())
             self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
-
-
-        M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value
-        M500_min = M500.to(u.Msun).value - M500_err_lo.to(u.Msun).value
-        M500_max = M500.to(u.Msun).value + M500_err_hi.to(u.Msun).value
-        self.agn_factors_min = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
-        self.rad_factors_min = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
-
-        self.agn_factors_max = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
-        self.rad_factors_max = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
 
         def D(r): # calculates the part of DM cooling that isnt dependent on L500 or sigma0 or mx
             f_chi=1
@@ -122,37 +115,43 @@ class Cluster_werr():
         rho_c = self.rho_c.to(u.Msun/u.Mpc**3).value
         return (delta_c*rho_c)
 
-    def M_enc(self, r):
+    def M_enc(self, r, r500=None, c500=None):
         if isinstance(r, float):
             r=r*u.Mpc
         r = np.array(r)
-        ys = r/self.rs
-        #print(ys[0])
+
+        r500=r500 or self.R500
+        c500=c500 or self.c500
+        ys = r/(r500/c500)
         y_term = (np.log(1+ys) - (ys/(1+ys)))
         #y_term = [(1+y).log() - (y/(1+y)) for y in ys] #gives same output as np.log
-        
-        return np.multiply((4 * np.pi * self.rs**3 * self.rho_s), y_term)
+        rho_s = self.get_rho_s(500., c500)
+        return np.multiply((4 * np.pi * (r500/c500)**3 * rho_s), y_term)
 
 
-    def rho_tot(self, r):
-        y = r/self.rs
-        return np.divide(self.rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
+    def rho_tot(self, r, r500=None, c500=None):
+        r500=r500 or self.R500
+        c500=c500 or self.c500
+        rho_s = self.get_rho_s(500., c500)
+        y = r/(r500/c500)
+        return np.divide(rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
     
     # pressure
-    def P500_planelles(self): #uses old method to compute P500
+    def P500_planelles(self, m500=None): #uses old method to compute P500
+        m500=m500 or self.M500
         omega_m =0.24
         omega_lambda = 1-omega_m
         h_p = 72./100.
         Ez = np.sqrt(omega_m*(1+self.z)**3 + omega_lambda)
         # returns in erg/cm3
-        return (1.14/0.59 * 1.45*1e-11 * (self.M500/(1e15*h_p**(-1)))**(2./3.)*Ez**(8./3.))
+        return (1.14/0.59 * 1.45*1e-11 * (m500/(1e15*h_p**(-1)))**(2./3.)*Ez**(8./3.))
 
     
-    def Pg(self, x): #x=r/r500
-        P500 = self.P500_planelles()
+    def Pg(self, x, m500=None): #x=r/r500
+        P500 = self.P500_planelles(m500=m500)
         num = P0*P500
-        denom = (np.power(c500*x,gamma) 
-              * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))
+        denom = (np.power(np.multiply(c500_const,x),gamma) 
+              * (1+ np.power(np.multiply(c500_const,x), alpha))**((beta-gamma)/alpha))
         return np.divide(num, denom) # returns in erg/cm3
     
 
@@ -194,17 +193,20 @@ class Cluster_werr():
         denom = (G*self.M_enc(r))
         return (num/denom)*np.array(dPdr)*conv # returns in Msun/Mpc3
 
-    def T_g(self, r_value, match_gaspari=True): #r is inputted as float
+    def T_g(self, r_value, match_gaspari=True, r500=None, m500=None, c500=None): #r is inputted as float
+        r500=r500 or self.R500
+        m500=m500 or self.M500
+
         r=r_value
         mu=0.59 # this comes from Tozzi, check this
         conv = (u.erg/u.cm**3).to(u.Msun/u.Mpc**3)
         if match_gaspari:
             anchor = self.energies.T500()
-            T500 = (mu*(const.m_p.to(u.GeV).value)*self.Pg(self.R500/self.R500)/self.rho_g(self.R500))*conv
+            T500 = (mu*(const.m_p.to(u.GeV).value)*self.Pg(r500/r500, m500=m500)/self.rho_g(r500))*conv
             mult_by = anchor/T500
         else:
             mult_by=1
-        T_g = (mu*(const.m_p.to(u.GeV).value)*self.Pg(r/self.R500)/self.rho_g(r))*conv
+        T_g = (mu*(const.m_p.to(u.GeV).value)*self.Pg(r/r500, m500=m500)/self.rho_g(r))*conv
         return T_g*mult_by # returns T_g in GeV
 
 
@@ -263,7 +265,7 @@ class Cluster_werr():
         elif vol_rate == 'gfe':
             volume_cooling_rate = self.vol_radiative_cooling_rate_gfe(rs, match_gaspari=match_gaspari, Tb=Tb)
 
-
+        #print(rs[0],rs[-1])
         integrand = (4 * np.pi * np.multiply(
             volume_cooling_rate, 
             np.power(rs, 2))*(u.Mpc/u.cm).to(1)**3)
@@ -444,78 +446,152 @@ class Cluster_werr():
         L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
         T_chi = self.Tx_by_mx*mx
 
-        def calculate_heating_cooling_rates(L):
-            T500 = self.energies.T500(L/1e44)
-            T500k = T500*GeV_to_K
-            Tbs = np.multiply(self.Tbs_norm, T500k)
-            #print(self.Tbs_norm[-1])
-            #T500_iq = self.Tbs[-1]
-            Linj=self.heating.get_Linj_from_L500(L)
+        L_indep_factors_full_min = np.divide(self.precalc.L_indep_factors_min*s0,((mx + mp_GeV) ** 2))
+        T_chi_min = self.precalc.Tx_by_mx_min*mx
 
-            #cooling_rate = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=Tbs)
+        L_indep_factors_full_max = np.divide(self.precalc.L_indep_factors_max*s0,((mx + mp_GeV) ** 2))
+        T_chi_max = self.precalc.Tx_by_mx_max*mx
+
+        # def calculate_heating_cooling_rates(L, bound=None):
+        #     T500 = T500_from_L500(L/1e44, bound=bound)#self.energies.T500(L/1e44)
+        #     T500k = T500*GeV_to_K
+        #     Tbs = np.multiply(self.Tbs_norm, T500k)
+
+        #     Linj=self.heating.get_Linj_from_L500(L)
+
+        #     cooling_rate=np.sqrt(T500k)*self.rad_factors
+        #     uth = np.sqrt(Tbs/ mp_GeV + self.Tx_by_mx)
+
+        #     integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+        #     dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
+
+        #     heating_rate = Linj * self.agn_factors
+
+        #     return heating_rate, cooling_rate, dm_cooling_rate#, dm_cooling_rate1
+
+        def equation(logL): # L in 1e44 erg/s
+            #L=np.power(10, logL)
+            #heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
+            T500 = T500_from_L500(logL, bound=None)
+            T500k = T500*GeV_to_K
+            #print(T500k)
+            Tbs = np.multiply(self.Tbs_norm, T500k)
+            #Tbs_GeV = np.multiply(self.Tbs_norm*u.GeV.to(u.K, equivalencies=u.temperature_energy()), T500)
+
             cooling_rate=np.sqrt(T500k)*self.rad_factors
             #print(cooling_rate)
 
-            #dm_cooling_rate1 = self.integrated_dm_cooling_rate(rmin, rmax, s0, mx, Tb=Tbs)
-            #print(dm_cooling_rate1)
-            #T_b = 
+            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            #print(uth[-1])
 
-            uth = np.sqrt(Tbs/ mp_GeV + self.Tx_by_mx)
-
-            #print(Tbs, T_chi)
             integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
             #print(dm_cooling_rate)
 
-
-            #heating_rate = self.total_heating_rate(rmin, rmax, rc, Linj)
+            Linj=Linj_from_L500(logL)
+            #print(Linj)
             heating_rate = Linj * self.agn_factors
-            #print(dm_cooling_rate1, dm_cooling_rate)
-            return heating_rate, cooling_rate, dm_cooling_rate#, dm_cooling_rate1
+            #print(heating_rate)
+            #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
-        def equation(logL):
-            L=np.power(10, logL)
-            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
-
-            return heating.value - cooling.value - dm_cooling.value
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
         
-        def equation_upper(logL):
-            L=np.power(10, logL)
-            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
+        def equation_upper(logL): # yields L upper bound from highest mass, highest temperature, lowest AGN heating (lowest net heating for a given L)
+            T500 = T500_from_L500(logL, bound='max')
+            T500k = T500*GeV_to_K
+            #print(T500k)
+            Tbs = np.multiply(self.precalc.Tbs_norm_max, T500k)
 
-            heating_upper = heating.value + heating.plus
-            cooling_lower = cooling.value - cooling.minus
-            dm_cooling_lower = dm_cooling.value - dm_cooling.minus
-            return heating_upper - cooling_lower - dm_cooling_lower
+            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
+            #print(cooling_rate)
 
-        def equation_lower(logL):
-            L=np.power(10, logL)
-            heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
+            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
+            #print(uth[-1])
 
-            heating_lower = heating.value - heating.minus
-            cooling_upper = cooling.value + cooling.plus
-            dm_cooling_upper = dm_cooling.value + dm_cooling.plus
-            return heating_lower - cooling_upper - dm_cooling_upper
+            integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
+            dm_cooling_rate = np.trapz(integrand, self.precalc.rs_max)
+            #print(dm_cooling_rate)
 
+            Linj=Linj_from_L500(logL, bound='min')
+            #print(Linj)
+            heating_rate = Linj * self.precalc.agn_factors_max
+            #print(heating_rate)
+            #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
-        L_solution = brentq(equation, 44, 55)
-        L_lower=brentq(equation_upper, L_solution-1, L_solution)
-        L_upper=brentq(equation_lower, L_solution, L_solution+1)
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
+
+        def equation_lower(logL): # yields L lower bound from lowest mass, lowest temperature, highest AGN heating (highest net heating for a given L)
+            T500 = T500_from_L500(logL, bound='min')
+            T500k = T500*GeV_to_K
+            #print(T500k)
+            Tbs = np.multiply(self.precalc.Tbs_norm_min, T500k)
+
+            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
+            #print(cooling_rate)
+
+            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
+            #print(uth[-1])
+
+            integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min)
+            dm_cooling_rate = np.trapz(integrand, self.precalc.rs_min)
+            #print(dm_cooling_rate)
+
+            Linj=Linj_from_L500(logL, bound='max')
+            #print(Linj)
+            heating_rate = Linj * self.precalc.agn_factors_min
+            #print(heating_rate)
+            #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
+
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
+
+        L_solution = brentq(equation, -5, 5)
+        L_upper=brentq(equation_upper, -5, 5)
+        L_lower=brentq(equation_lower, -5, 5)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
         #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
-        return L_solution, L_lower, L_upper
+        return 10**(L_solution+44), 10**(L_upper+44), 10**(L_lower+44),
 
-        #Ls = np.logspace(44, 50)
+        #Ls = np.linspace(44, 45)
         #net_heating_rate = [equation(L) for L in Ls]
-        #return net_heating_rate
+        #L = -1
+        #return equation(L), equation_upper(L), equation_lower(L)#net_heating_rate
         
 
+def Linj_from_L500(logL500, bound=None):
+    # calculate Linj for a given L500
+    if bound:
+        if bound=='min': # minimize Linj by taking lowest b, m values
+            b = 10 - 0.11
+            m = 0.38 - 0.03
+        elif bound=='max': # maximize  Linj by taking highest b, m values
+            b = 10 + 0.11
+            m = 0.38 + 0.03
+    else:
+        b = 10
+        m = 0.38
+
+    logMbh = b+m*(logL500)#/(1e44*u.erg/u.s))
+    Mbh = np.power(10, logMbh)#*u.Msun
+    return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))
+
+def T500_from_L500(logL500, bound=None):
+    if bound:
+        if bound=='max': # maximize T by taking lowest b, m values
+            b = -2.34 - 0.09
+            m = 4.71 - 0.26
+        elif bound=='min': # minimize T by taking highest b, m values
+            b = -2.34 + 0.09
+            m = 4.71 + 0.26
+    else:
+        b = -2.34
+        m = 4.71
+    logT = (logL500 - b)/m
+    return np.power(10, logT) * 1e-6 # in GeV
 
 
 
-
-def temp_from_luminosity(luminosity):
-    lum = luminosity.to(u.erg / u.s)
-    log_T = (np.log10(lum.value) - 45.06) / 2.88 + np.log10(6)
-    T = np.power(10, log_T) * u.keV
-    return T.to(u.GeV)
+# def temp_from_luminosity(luminosity):
+#     lum = luminosity.to(u.erg / u.s)
+#     log_T = (np.log10(lum.value) - 45.06) / 2.88 + np.log10(6)
+#     T = np.power(10, log_T) * u.keV
+#     return T.to(u.GeV)

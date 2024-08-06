@@ -30,7 +30,7 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     #if log_mx<-4 or log_mx>log_mp: #10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
     #    return -np.inf
 
-    if not (-40 <= log_s0 <= 0) or not (-4 <= log_mx <= -1): # mx<0.1GeV
+    if not (-40 <= log_s0 <= -23) or not (-4 <= log_mx <= -1): # mx<0.1GeV
         return -np.inf
 
     # calculate model predicted L500
@@ -55,6 +55,7 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     #print(predicted)
     #print(variances_pred)
     #predicted = np.array([p.value for p in predicted_werr])
+    print(predicted, obs)
 
     X2 = chi_squared(predicted, obs, variances_obs, add_var=variances_pred)
     return -X2/2

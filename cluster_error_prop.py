@@ -470,6 +470,7 @@ class Cluster_werr():
         #     return heating_rate, cooling_rate, dm_cooling_rate#, dm_cooling_rate1
 
         def equation(logL): # L in 1e44 erg/s
+            #print(logL)
             #L=np.power(10, logL)
             #heating, cooling, dm_cooling = calculate_heating_cooling_rates(L)
             T500 = T500_from_L500(logL, bound=None)
@@ -492,7 +493,7 @@ class Cluster_werr():
             #print(Linj)
             heating_rate = Linj * self.agn_factors
             #print(heating_rate)
-            #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
+            #print('heating',heating_rate.value, 'cooling', cooling_rate.value, 'dm cooling', dm_cooling_rate.value)
 
             return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
         
@@ -544,9 +545,11 @@ class Cluster_werr():
 
             return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
 
-        L_solution = 10**(brentq(equation, -5, 15))
-        L_upper=10**(brentq(equation_upper, -5, 15))
-        L_lower=10**(brentq(equation_lower, -5, 15))
+        log_L_solution = (brentq(equation, -2, 180))
+        print(log_L_solution)
+        L_upper=10**(brentq(equation_upper, log_L_solution-10, log_L_solution+10))
+        L_lower=10**(brentq(equation_lower, log_L_solution - 10, log_L_solution+10))
+        L_solution = 10**(log_L_solution)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
         L_var = np.max([L_upper - L_solution, L_solution - L_lower])
         #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s

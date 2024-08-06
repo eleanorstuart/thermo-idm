@@ -42,15 +42,15 @@ class PreCalculations:
         self.rs_min = xs*self.cluster.R500
 
         Tbs_min = np.asarray(self.cluster.T_g(self.rs_min, match_gaspari=False))
-        self.Tbs_norm_min = Tbs_min/(Tbs_min[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy())) # units 1/K
+        self.Tbs_norm_min = np.array([i.value for i in Tbs_min/(Tbs_min[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy()))]) # units 1/K
 
         self.rad_factors_min = cluster.total_cooling_rate(a_u(r0_min), 
                                                           a_u(R500_min), 
                                                           vol_rate='gfe', 
                                                           Tb=self.Tbs_norm_min).value
         
-        self.L_indep_factors_min = np.array(self.D(self.rs_min)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg
-        self.Tx_by_mx_min = np.asarray(cluster.Tx_over_mx(self.rs_min))
+        self.L_indep_factors_min = np.array([i.value for i in np.array(self.D(self.rs_min)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg])
+        self.Tx_by_mx_min = np.asarray([t.value for t in cluster.Tx_over_mx(self.rs_min)])
 
         # calculate maximum heating and cooling factors for the cluster
         R500_max = ((M500_max/(4*np.pi/3 * 500. * (cluster.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
@@ -67,18 +67,18 @@ class PreCalculations:
                                                            Linj = 1*u.erg/u.s, 
                                                            n=50)).to(u.erg/u.s).value.value
 
-        self.rs_max = xs*self.cluster.R500
+        self.rs_max = xs*self.cluster.R500 #np.array([r.value for r in rs])
 
         Tbs_max = np.asarray(self.cluster.T_g(self.rs_max, match_gaspari=False))
-        self.Tbs_norm_max = Tbs_max/(Tbs_max[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy())) # units 1/K
+        self.Tbs_norm_max = np.array([i.value for i in Tbs_max/(Tbs_max[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy()))]) # units 1/K
 
         self.rad_factors_max = cluster.total_cooling_rate(a_u(r0_max), 
                                                           a_u(R500_max), 
                                                           vol_rate='gfe', 
                                                           Tb=self.Tbs_norm_max).value
         
-        self.L_indep_factors_max = np.array(self.D(self.rs_max)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg
-        self.Tx_by_mx_max = np.asarray(cluster.Tx_over_mx(self.rs_max))
+        self.L_indep_factors_max = np.array([i.value for i in np.array(self.D(self.rs_max)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg])
+        self.Tx_by_mx_max = np.asarray([t.value for t in cluster.Tx_over_mx(self.rs_max)])
 
         # restore original values
         self.cluster.M500 = M500 

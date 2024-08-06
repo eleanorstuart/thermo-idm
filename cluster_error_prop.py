@@ -475,14 +475,18 @@ class Cluster_werr():
             T500k = T500*GeV_to_K
             Tbs = np.multiply(self.precalc.Tbs_norm_max, T500k)
 
-            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
+            #cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
+            cooling_rate=np.sqrt(T500k)*self.rad_factors
 
-            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
-            integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
+            #uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
+            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            #integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
+            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_max]))
 
             Linj=Linj_from_L500(logL, bound='min')
-            heating_rate = Linj * self.precalc.agn_factors_max
+            #heating_rate = Linj * self.precalc.agn_factors_max
+            heating_rate = Linj * self.agn_factors
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
@@ -491,21 +495,25 @@ class Cluster_werr():
             T500k = T500*GeV_to_K
             Tbs = np.multiply(self.precalc.Tbs_norm_min, T500k)
 
-            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
+            #cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
+            cooling_rate=np.sqrt(T500k)*self.rad_factors
 
-            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
-            integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min)
+            #uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
+            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            #integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min
+            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_min]))
 
             Linj=Linj_from_L500(logL, bound='max')
-            heating_rate = Linj * self.precalc.agn_factors_min
+            #heating_rate = Linj * self.precalc.agn_factors_min
+            heating_rate = Linj * self.agn_factors
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
         log_L_solution = (brentq(equation, -2, 180))
         #print(log_L_solution)
-        L_upper=10**(brentq(equation_upper, log_L_solution, log_L_solution+180))
-        L_lower=10**(brentq(equation_lower, log_L_solution - 20, log_L_solution))
+        L_upper=10**(brentq(equation_upper, log_L_solution-10, log_L_solution+180))
+        L_lower=10**(brentq(equation_lower, log_L_solution - 20, log_L_solution+10))
         L_solution = 10**(log_L_solution)
         #print(L_solution, L_upper, L_lower)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars

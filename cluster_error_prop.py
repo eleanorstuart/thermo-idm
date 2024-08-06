@@ -519,7 +519,7 @@ class Cluster_werr():
         # net_heating_rate_max = [equation_upper(L) for L in Ls]
         #L = 0
 
-        return net_heating_rate, net_heating_rate_min, net_heating_rate_max
+        #return net_heating_rate, net_heating_rate_min, net_heating_rate_max
         #return equation(L), equation_upper(L), equation_lower(L)#net_heating_rate
         
 
@@ -527,11 +527,11 @@ def Linj_from_L500(logL500, bound=None):
     # calculate Linj for a given L500
     if bound:
         if bound=='min': # minimize Linj by taking lowest b, m values
-            b = 10 - 0.11
-            m = 0.38 - 0.03
+            b = 10# - 0.11
+            m = 0.38# - 0.03
         elif bound=='max': # maximize  Linj by taking highest b, m values
-            b = 10 + 0.11
-            m = 0.38 + 0.03
+            b = 10# + 0.11
+            m = 0.38# + 0.03
     else:
         b = 10
         m = 0.38
@@ -543,11 +543,11 @@ def Linj_from_L500(logL500, bound=None):
 def T500_from_L500(logL500, bound=None):
     if bound:
         if bound=='max': # maximize T by taking lowest b, m values
-            b = -2.34 - 0.09
-            m = 4.71 - 0.26
+            b = -2.34 #- 0.09
+            m = 4.71 #- 0.26
         elif bound=='min': # minimize T by taking highest b, m values
-            b = -2.34 + 0.09
-            m = 4.71 + 0.26
+            b = -2.34 #+ 0.09
+            m = 4.71 #+ 0.26
     else:
         b = -2.34
         m = 4.71

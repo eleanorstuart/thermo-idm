@@ -21,7 +21,7 @@ cosmo=FlatLambdaCDM(70, 0.3)
 h=0.7
 h70=1
 P0=6.85
-c500=1.09
+c500_const=1.09
 gamma=0.31
 alpha=1.07
 beta=5.46
@@ -150,8 +150,8 @@ class Cluster_werr():
     def Pg(self, x, m500=None): #x=r/r500
         P500 = self.P500_planelles(m500=m500)
         num = P0*P500
-        denom = (np.power(np.multiply(self.c500,x),gamma) 
-              * (1+ np.power(np.multiply(self.c500,x), alpha))**((beta-gamma)/alpha))
+        denom = (np.power(np.multiply(c500_const,x),gamma) 
+              * (1+ np.power(np.multiply(c500_const,x), alpha))**((beta-gamma)/alpha))
         return np.divide(num, denom) # returns in erg/cm3
     
 

@@ -54,7 +54,7 @@ class Cluster_werr():
 
         self.energies=Energies(self)
         self.heating=IqbalHeating(self)
-        #self.precalc=PreCalculations(self)
+        self.precalc=PreCalculations(self)
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.001*self.R500

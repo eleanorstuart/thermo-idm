@@ -20,7 +20,7 @@ cosmo=FlatLambdaCDM(70, 0.3)
 h=0.7
 h70=1
 P0=6.85
-c500=1.09
+c500_const=1.09
 gamma=0.31
 alpha=1.07
 beta=5.46
@@ -38,15 +38,17 @@ class Cluster_werr():
         self.rho_c = (3*cosmo.H(self.z)**2/(8*np.pi*const.G)).to(u.g/u.cm**3)
         self.overdensity_const = 18*np.pi**2 + 82*(cosmo.Om(self.z) - 1) - 39*(cosmo.Om(self.z) - 1)**2
         self.L500=L500
-        self.L_err = L_err.value
+
         if L_err!=None:
             self.L500 = a_u(self.L500.value, L_err.value, L_err.value)
+            self.L_err = L_err.value
         if M500!=None: 
             self.M500 = a_u(M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value)
             self.c500 = (5.71*(self.M500/(2*1e12 * h**-1))**(-0.084) * (1+self.z)**(-0.47)) #this is an estimate from c200
             self.R500 = ((self.M500/(4*np.pi/3 * 500. * (self.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
-            self.rs = self.R500/self.c500
-            self.rho_s = self.get_rho_s(500., self.c500)
+            #self.rs = self.R500/self.c500
+            self.scale_radius = self.R500/self.c500
+            #self.rho_s = self.get_rho_s(500., self.c500)
         else:
             raise ValueError("Provide M500")
 
@@ -58,7 +60,7 @@ class Cluster_werr():
         rmax = self.R500
         rc = 0.1*self.R500
 
-        self.tot_rad = self.total_cooling_rate(rmin, rmax)
+        # self.tot_rad = self.total_cooling_rate(rmin, rmax)
         self.agn_factors = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
 
 
@@ -79,14 +81,14 @@ class Cluster_werr():
             self.dm_rdep_factors = np.asarray(self.rho_tot(rs) * self.rho_g(rs)*uth*conv**2)
 
 
-        M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value
-        M500_min = M500.to(u.Msun).value - M500_err_lo.to(u.Msun).value
-        M500_max = M500.to(u.Msun).value + M500_err_hi.to(u.Msun).value
-        self.agn_factors_min = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
-        self.rad_factors_min = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
+        # M500.to(u.Msun).value, M500_err_hi.to(u.Msun).value,  M500_err_lo.to(u.Msun).value
+        # M500_min = M500.to(u.Msun).value - M500_err_lo.to(u.Msun).value
+        # M500_max = M500.to(u.Msun).value + M500_err_hi.to(u.Msun).value
+        # self.agn_factors_min = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
+        # self.rad_factors_min = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
 
-        self.agn_factors_max = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
-        self.rad_factors_max = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
+        # self.agn_factors_max = (self.total_heating_rate(rmin, rmax, rc, Linj = 1*u.erg/u.s, n=50)).to(u.erg/u.s).value
+        # self.rad_factors_max = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=self.Tbs_norm)
 
         def D(r): # calculates the part of DM cooling that isnt dependent on L500 or sigma0 or mx
             f_chi=1
@@ -126,17 +128,23 @@ class Cluster_werr():
         if isinstance(r, float):
             r=r*u.Mpc
         r = np.array(r)
-        ys = r/self.rs
+        ys = r/self.scale_radius
         #print(ys[0])
         y_term = (np.log(1+ys) - (ys/(1+ys)))
         #y_term = [(1+y).log() - (y/(1+y)) for y in ys] #gives same output as np.log
-        
-        return np.multiply((4 * np.pi * self.rs**3 * self.rho_s), y_term)
+        rho_s = self.get_rho_s(500., self.c500)
+        return np.multiply((4 * np.pi * self.scale_radius**3 * rho_s), y_term)
 
 
-    def rho_tot(self, r):
-        y = r/self.rs
-        return np.divide(self.rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
+    # def rho_tot(self, r):
+    #     y = r/self.rs
+    #     return np.divide(self.rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
+    def rho_tot(self, r, r500=None):# c500=None):
+        r500=r500 or self.R500
+        #c500=c500 or self.c500
+        rho_s = self.get_rho_s(500., self.c500)
+        y = r/(r500/self.c500)
+        return np.divide(rho_s, (y * (1+y)**2)) # returns in Msun/Mpc**3
     
     # pressure
     def P500_planelles(self): #uses old method to compute P500
@@ -151,8 +159,8 @@ class Cluster_werr():
     def Pg(self, x): #x=r/r500
         P500 = self.P500_planelles()
         num = P0*P500
-        denom = (np.power(c500*x,gamma) 
-              * (1+ np.power(c500*x, alpha))**((beta-gamma)/alpha))
+        denom = (np.power(c500_const*x,gamma) 
+              * (1+ np.power(c500_const*x, alpha))**((beta-gamma)/alpha))
         return np.divide(num, denom) # returns in erg/cm3
     
 

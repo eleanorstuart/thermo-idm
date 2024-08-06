@@ -544,12 +544,13 @@ class Cluster_werr():
 
             return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
 
-        L_solution = brentq(equation, -5, 5)
-        L_upper=brentq(equation_upper, -5, 5)
-        L_lower=brentq(equation_lower, -5, 5)
+        L_solution = 10**(brentq(equation, -5, 15))
+        L_upper=10**(brentq(equation_upper, -5, 15))
+        L_lower=10**(brentq(equation_lower, -5, 15))
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
-        #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
-        return 10**(L_solution+44), 10**(L_upper+44), 10**(L_lower+44),
+        L_var = np.max([L_upper - L_solution, L_solution - L_lower])
+        #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s
+        return L_solution, L_var
 
         #Ls = np.linspace(44, 45)
         #net_heating_rate = [equation(L) for L in Ls]

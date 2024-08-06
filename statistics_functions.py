@@ -19,7 +19,7 @@ def chi_squared(model, data, variance, add_var=0): # take lists of model predict
     return np.sum((model - data)**2 / total_var)
 
 # log likelihood function for MCMC
-def log_lik(p0, obs, nfws, variances, multfactor=1, agn_model='iqbal'):
+def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     log_s0 = p0[0]
     log_mx = p0[1]
 
@@ -40,17 +40,23 @@ def log_lik(p0, obs, nfws, variances, multfactor=1, agn_model='iqbal'):
     mx = 10**log_mx
     constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 
-    if agn_model == 'iqbal':
-        predicted_werr = np.array([nfw.L500_analytic(mx, constant, mult_agn=multfactor) for nfw in nfws])
-    elif agn_model == 'eddington':
-        predicted_werr = np.array([nfw.L500_analytic_eddington(mx, constant, frac_L=multfactor) for nfw in nfws])
-    else:
-        raise ValueError("Invalid method. Expected 'analytic' or 'eddington'.")
+    # if agn_model == 'iqbal':
+    #     predicted_werr = np.array([nfw.L500_analytic(mx, constant, mult_agn=multfactor) for nfw in nfws])
+    # elif agn_model == 'eddington':
+    #     predicted_werr = np.array([nfw.L500_analytic_eddington(mx, constant, frac_L=multfactor) for nfw in nfws])
+    # else:
+    #     raise ValueError("Invalid method. Expected 'analytic' or 'eddington'.")
+    variances_obs = np.array([nfw.L_err for nfw in nfws])
 
-    variances_pred = np.array([max(p.plus, p.minus) for p in predicted_werr])
-    predicted = np.array([p.value for p in predicted_werr])
+    predicted_werr = np.array([nfw.L500_numerical(mx, s0) for nfw in nfws])
+    predicted, variances_pred = zip(*predicted_werr)
+    predicted = np.array(predicted)
+    variances_pred = np.array(variances_pred)
+    #print(predicted)
+    #print(variances_pred)
+    #predicted = np.array([p.value for p in predicted_werr])
 
-    X2 = chi_squared(predicted, obs, variances, add_var=variances_pred)
+    X2 = chi_squared(predicted, obs, variances_obs, add_var=variances_pred)
     return -X2/2
 
 def log_lik1(p0, obs, nfws, variances, multagn=1, mx=0.01):

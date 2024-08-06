@@ -494,7 +494,7 @@ class Cluster_werr():
             #print(heating_rate)
             #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
-            return heating_rate.value - cooling_rate.value #- dm_cooling_rate.value
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
         
         def equation_upper(logL): # yields L upper bound from highest mass, highest temperature, lowest AGN heating (lowest net heating for a given L)
             T500 = T500_from_L500(logL, bound='max')
@@ -518,7 +518,7 @@ class Cluster_werr():
             #print(heating_rate)
             #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
-            return heating_rate.value - cooling_rate.value #- dm_cooling_rate.value
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
 
         def equation_lower(logL): # yields L lower bound from lowest mass, lowest temperature, highest AGN heating (highest net heating for a given L)
             T500 = T500_from_L500(logL, bound='min')
@@ -542,9 +542,9 @@ class Cluster_werr():
             #print(heating_rate)
             #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
-            return heating_rate.value - cooling_rate.value #- dm_cooling_rate.value
+            return heating_rate.value - cooling_rate.value - dm_cooling_rate.value
 
-        L_solution = brentq(equation, -10, 10)
+        L_solution = brentq(equation, -5, 5)
         L_upper=brentq(equation_upper, -5, 5)
         L_lower=brentq(equation_lower, -5, 5)
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars

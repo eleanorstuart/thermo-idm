@@ -13,6 +13,7 @@ from cluster_functions import c
 from cluster_energies import Energies
 from cluster_iqbal_heating import IqbalHeating
 from cluster_precalculations import PreCalculations
+from cluster_thermalization import InteractionRate
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -54,7 +55,8 @@ class Cluster_werr():
 
         self.energies=Energies(self)
         self.heating=IqbalHeating(self)
-        self.precalc=PreCalculations(self)
+        self.therm = InteractionRate(self)
+       #self.precalc=PreCalculations(self)
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.001*self.R500
@@ -474,19 +476,21 @@ class Cluster_werr():
             T500 = T500_from_L500(logL, bound='max')
             T500k = T500*GeV_to_K
             Tbs = np.multiply(self.precalc.Tbs_norm_max, T500k)
+            #Tbs = np.multiply(self.Tbs_norm, T500k)
 
-            #cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
-            cooling_rate=np.sqrt(T500k)*self.rad_factors
+            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
+            #cooling_rate=np.sqrt(T500k)*self.rad_factors
 
-            #uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
-            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
-            #integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
-            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
+            #uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
+            #integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_max]))
+            #dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
 
             Linj=Linj_from_L500(logL, bound='min')
-            #heating_rate = Linj * self.precalc.agn_factors_max
-            heating_rate = Linj * self.agn_factors
+            heating_rate = Linj * self.precalc.agn_factors_max
+            #heating_rate = Linj * self.agn_factors
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
@@ -494,19 +498,21 @@ class Cluster_werr():
             T500 = T500_from_L500(logL, bound='min')
             T500k = T500*GeV_to_K
             Tbs = np.multiply(self.precalc.Tbs_norm_min, T500k)
+            #Tbs = np.multiply(self.Tbs_norm, T500k)
 
-            #cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
-            cooling_rate=np.sqrt(T500k)*self.rad_factors
+            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
+            #cooling_rate=np.sqrt(T500k)*self.rad_factors
 
-            #uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
-            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
-            #integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min
-            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
+            #uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min)
+            #integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_min]))
+            #dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
 
             Linj=Linj_from_L500(logL, bound='max')
-            #heating_rate = Linj * self.precalc.agn_factors_min
-            heating_rate = Linj * self.agn_factors
+            heating_rate = Linj * self.precalc.agn_factors_min
+            #heating_rate = Linj * self.agn_factors
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
@@ -535,11 +541,11 @@ def Linj_from_L500(logL500, bound=None):
     # calculate Linj for a given L500
     if bound:
         if bound=='min': # minimize Linj by taking lowest b, m values
-            b = 10# - 0.11
-            m = 0.38# - 0.03
+            b = 10 #- 0.11
+            m = 0.38 #- 0.03
         elif bound=='max': # maximize  Linj by taking highest b, m values
-            b = 10# + 0.11
-            m = 0.38# + 0.03
+            b = 10 #+ 0.11
+            m = 0.38 #+ 0.03
     else:
         b = 10
         m = 0.38

@@ -235,6 +235,17 @@ class Cluster_werr():
             np.power(rs, 2)) * (u.Mpc**3/u.cm**3).to(1)
         return trapezoid(integrand, rs)
 
+    def dheating_dT(self, rmin, rmax, rc, T500):
+        h = 1e-6 * T500
+        Linj_plus = Linj_from_L500(L500_from_T500(T500+h))
+        Linj_minus = Linj_from_L500(L500_from_T500(T500-h))
+        heating_rate_plus = self.total_heating_rate(rmin, rmax, rc, Linj=Linj_plus)
+        heating_rate_minus = self.total_heating_rate(rmin, rmax, rc, Linj=Linj_minus)
+        dheating_dT = (heating_rate_plus - heating_rate_minus) / (2 * h)
+        return dheating_dT
+
+        
+
 
     # gaspari agn heating
     def get_Mbh(self, L=None):
@@ -272,6 +283,13 @@ class Cluster_werr():
             volume_cooling_rate, 
             np.power(rs, 2))*(u.Mpc/u.cm).to(1)**3)
         return trapezoid(integrand, rs)
+    
+    def dcooling_dT(self, rmin, rmax, T500,  match_gaspari=True):
+        h = 1e-6 * T500 *u.GeV.to(u.K, equivalencies=u.temperature_energy())
+        cooling_rate_plus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=(self.Tbs_norm)*(T500+h))
+        cooling_rate_minus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe',  Tb=(self.Tbs_norm)*(T500-h))
+        dcooling_dT = (cooling_rate_plus - cooling_rate_minus) / (2 * h)
+        return dcooling_dT
 
     def cooling_function(self, r, match_gaspari=True):
         alpha=-1.7
@@ -355,6 +373,13 @@ class Cluster_werr():
             self.vol_dm_cooling_rate(rs, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=Tb)*(u.Mpc/u.cm).to(1)**3, np.power(rs, 2)))
         #print(integrand[0])
         return np.trapz(integrand, rs)
+    
+    def d_dmcooling_dT(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, T500=None):
+        h = 1e-6 * T500 *u.GeV.to(u.K, equivalencies=u.temperature_energy())
+        cooling_rate_plus = self.integrated_dm_cooling_rate(r, r, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm)*(T500+h))
+        cooling_rate_minus = self.integrated_dm_cooling_rate(r, r, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm)*(T500-h))
+        dcooling_dT = (cooling_rate_plus - cooling_rate_minus) / (2 * h)
+        return dcooling_dT
 
     def integrated_dm_cooling_rate_fast(self, mx, s0_factors):
         # calculate the DM cooling rate for a given mchi and sigma0
@@ -567,6 +592,14 @@ def T500_from_L500(logL500, bound=None):
         m = 4.71
     logT = (logL500 - b)/m
     return np.power(10, logT) * 1e-6 # in GeV
+
+def L500_from_T500(T500):
+    logT = np.log10(T500*1e6)
+    return -2.34 + 4.71*logT
+
+def L500_from_Linj(Linj):
+    logMbh = np.log10(Linj/1e44) + 9.5
+    return (logMbh - 10) / 0.38
 
 
 

@@ -9,15 +9,19 @@ from cluster_error_prop import Cluster_werr
 def load_data_and_var():
     # import datasets
     # this dataset contains the cluster properties (L500, M500, z, etc)
-    with open('data/mcxc_psz_combined.pkl', 'rb') as f:
-        comb_data = pickle.load(f)
-    low_z_data = comb_data[comb_data['z_y'] < 0.2][comb_data['Sub-Cat']=='REFLEX'][['OName',
-                                                                                    'AName',
-                                                                                    'L500', 
-                                                                                    'z_y', 
-                                                                                    'MSZ', 
-                                                                                    'e_MSZ', 
-                                                                                    'E_MSZ']].rename(columns={'AName': 'Name'}).dropna()
+    # with open('data/mcxc_psz_combined.pkl', 'rb') as f:
+    #     comb_data = pickle.load(f)
+    # low_z_data = comb_data[comb_data['z_y'] < 0.2][comb_data['Sub-Cat']=='REFLEX'][['OName',
+    #                                                                                 'AName',
+    #                                                                                 'L500', 
+    #                                                                                 'z_y', 
+    #                                                                                 'MSZ', 
+    #                                                                                 'e_MSZ', 
+    #                                                                                 'E_MSZ']].rename(columns={'AName': 'Name'}).dropna()
+    with open('data/reflex_mcxc_psz_low_z_clusters.p', 'rb') as h:
+        low_z_data = pickle.load(h)
+
+
     # this file contains the variances on the L500 measurements
     #with open('data/REFLEX.p', 'rb') as g:
     #    errors_dict = pickle.load(g)

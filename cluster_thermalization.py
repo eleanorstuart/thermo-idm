@@ -5,6 +5,9 @@ from astropy import units as u
 class InteractionRate:
     def __init__(self, cluster):
         self.cluster = cluster
+        self.avg_velocity = self.avg_over_volume(0.001*self.cluster.R500, self.cluster.R500, self.velocity)
+        self.avg_number_density = self.avg_over_volume(0.001*self.cluster.R500, self.cluster.R500, lambda r: self.dm_number_density(r, 1))/((u.Mpc.to(u.cm))**3) # does not include mchi, to get number density divide by mchi
+
 
     
     def velocity(self, r): # input r as Mpc, M_enc should be in Msun

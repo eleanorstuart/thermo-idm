@@ -2,6 +2,8 @@ import numpy as np
 from astropy import constants as const
 from astropy import units as u
 from scipy.optimize import brentq
+from scipy.interpolate import interp1d
+import pickle
 
 from equilibrium_functions import equil
 from cluster_functions import c
@@ -11,6 +13,19 @@ mp_GeV = (const.m_p).to(u.GeV).value
 log_mp = np.log10(mp_GeV)
 c0 = c(0) * (const.c.to(u.cm / u.s)).value
 GeV_to_erg = (u.GeV).to(u.erg)
+
+
+# Unpickle the dictionary from the file
+with open('data/prior_boundary_points.pkl', 'rb') as f:
+    data = pickle.load(f)
+
+# Unpack the dictionary into variables
+mchi_values = data['mchi']
+s0_max = data['max_s0']
+
+# Create the interpolation function
+boundary_func = interp1d(mchi_values, s0_max, kind='linear', fill_value='extrapolate')
+
 
 def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
     # TODO: add second source of variance
@@ -33,11 +48,12 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     if not (-40 <= log_s0 <= -23) or not (-4 <= log_mx <= -1): # mx<0.1GeV
         return -np.inf
 
-    # calculate model predicted L500
-    #s0 = np.power(10., float(log_s0))
-    #mx = np.power(10., float(log_mx))
     s0 = 10**log_s0
     mx = 10**log_mx
+
+    if s0>boundary_func(mx):
+        print('outside prior')
+        return -np.inf
     #constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 
     # if agn_model == 'iqbal':

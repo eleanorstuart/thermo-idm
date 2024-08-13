@@ -285,9 +285,9 @@ class Cluster_werr():
         return trapezoid(integrand, rs)
     
     def dcooling_dT(self, rmin, rmax, T500,  match_gaspari=True):
-        h = 1e-6 * T500 *u.GeV.to(u.K, equivalencies=u.temperature_energy())
-        cooling_rate_plus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=(self.Tbs_norm)*(T500+h))
-        cooling_rate_minus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe',  Tb=(self.Tbs_norm)*(T500-h))
+        h = 1e-6 * T500 
+        cooling_rate_plus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe', Tb=(self.Tbs_norm*u.GeV.to(u.K, equivalencies=u.temperature_energy()))*(T500+h))
+        cooling_rate_minus = self.total_cooling_rate(rmin, rmax, vol_rate='gfe',  Tb=(self.Tbs_norm*u.GeV.to(u.K, equivalencies=u.temperature_energy()))*(T500-h))
         dcooling_dT = (cooling_rate_plus - cooling_rate_minus) / (2 * h)
         return dcooling_dT
 
@@ -374,10 +374,10 @@ class Cluster_werr():
         #print(integrand[0])
         return np.trapz(integrand, rs)
     
-    def d_dmcooling_dT(self, r, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, T500=None):
-        h = 1e-6 * T500 *u.GeV.to(u.K, equivalencies=u.temperature_energy())
-        cooling_rate_plus = self.integrated_dm_cooling_rate(r, r, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm)*(T500+h))
-        cooling_rate_minus = self.integrated_dm_cooling_rate(r, r, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm)*(T500-h))
+    def d_dmcooling_dT(self, rmin, rmax, s0, m_chi, n=0, f_chi=1, m_psi=0.1*u.GeV, T500=None):
+        h = 1e-6 * T500 
+        cooling_rate_plus = self.integrated_dm_cooling_rate(rmin, rmax, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm*u.GeV.to(u.K, equivalencies=u.temperature_energy()))*(T500+h))
+        cooling_rate_minus = self.integrated_dm_cooling_rate(rmin, rmax, s0, m_chi, n=n, f_chi=f_chi, m_psi=m_psi, Tb=(self.Tbs_norm*u.GeV.to(u.K, equivalencies=u.temperature_energy()))*(T500-h))
         dcooling_dT = (cooling_rate_plus - cooling_rate_minus) / (2 * h)
         return dcooling_dT
 

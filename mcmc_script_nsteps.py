@@ -40,7 +40,7 @@ def run_mcmc():
     initial=np.zeros((nwalkers, ndim ))
 
     # initialize walkers
-    log_sigma0 = np.random.uniform(low=-40, high=-20, size=nwalkers).astype(np.float128)
+    log_sigma0 = np.random.uniform(low=-40, high=-23, size=nwalkers).astype(np.float128)
     #log_mp = np.log10(const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value)
     log_mx = np.random.uniform(low=-4, high=-1, size=nwalkers).astype(np.float128)
 

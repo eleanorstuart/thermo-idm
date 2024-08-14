@@ -29,7 +29,7 @@ boundary_func = interp1d(mchi_values, s0_max, kind='linear', fill_value='extrapo
 
 def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
     # TODO: add second source of variance
-    total_var = variance**2 + model**2#+ add_var**2
+    total_var = variance**2 + add_var**2
     #return sum((model[i]-data[i].value)**2/(total_var[i]) for i in range(len(data)))
     return np.sum((model - data)**2 / total_var)
 

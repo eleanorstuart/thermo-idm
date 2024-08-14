@@ -85,6 +85,10 @@ class PreCalculations:
         self.cluster.R500 = R500 
         self.cluster.c500 = c500
 
+        
+
+
+
     def D(self,r): # calculates the part of DM cooling that isnt dependent on L500 or sigma0 or mx
             f_chi=1
             rho_chi = self.cluster.rho_tot(r) * f_chi

@@ -1,3 +1,4 @@
+from ast import Try
 import numpy as np
 
 from astropy import units as u
@@ -56,7 +57,7 @@ class Cluster_werr():
         self.energies=Energies(self)
         self.heating=IqbalHeating(self)
         self.therm = InteractionRate(self)
-       #self.precalc=PreCalculations(self)
+        self.precalc=PreCalculations(self)
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.001*self.R500
@@ -100,7 +101,7 @@ class Cluster_werr():
             #return np.divide(num, denom)
             return num
         conv_T = (u.GeV/u.erg).to(1)
-        self.L_indep_factors = np.array([i.value for i in np.array(D(rs)*(u.Mpc/u.cm).to(1)**3)/conv_T])
+        self.L_indep_factors = np.asarray([i.value for i in np.array(D(rs)*(u.Mpc/u.cm).to(1)**3)/conv_T])
         self.rs_Mpc = np.array([r.value for r in rs])
         
         #T_chi = self.virial_temperature(rs, mx)
@@ -471,7 +472,7 @@ class Cluster_werr():
 
     def L500_numerical(self, mx, s0):
         L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
-        T_chi = np.array(self.Tx_by_mx*mx)
+        T_chi = np.array(self.Tx_by_mx*mx) 
 
         L_indep_factors_full_min = np.divide(self.precalc.L_indep_factors_min*s0,((mx + mp_GeV) ** 2))
         T_chi_min = np.array(self.precalc.Tx_by_mx_min*mx)
@@ -483,6 +484,7 @@ class Cluster_werr():
             T500 = T500_from_L500(logL, bound=None)
             T500k = T500*GeV_to_K
             Tbs = np.multiply(self.Tbs_norm, T500k)
+            #print(Tbs)
 
             cooling_rate=np.sqrt(T500k)*self.rad_factors
 
@@ -541,36 +543,87 @@ class Cluster_werr():
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
-        log_L_solution = (brentq(equation, -2, 180))
-        #print(log_L_solution)
-        L_upper=10**(brentq(equation_upper, log_L_solution-10, log_L_solution+180))
-        L_lower=10**(brentq(equation_lower, log_L_solution - 20, log_L_solution+10))
+        try:
+            log_L_solution = brentq(equation, -5, 100)
+        except ValueError as e:
+                print(f"Error finding log_L_solution: {e}")
+                print(f"equation(-5): {equation(-5)}, equation(100): {equation(100)}")
+                raise
+
+        try:
+            L_upper = 10**(brentq(equation_upper, log_L_solution - 10, log_L_solution + 200))
+        except ValueError as e:
+            print(f"Error finding L_upper: {e}")
+            print(f"equation_upper({log_L_solution - 10}): {equation_upper(log_L_solution - 10)}, equation_upper({log_L_solution + 200}): {equation_upper(log_L_solution + 200)}")
+            raise
+
+        try:
+            L_lower = 10**(brentq(equation_lower, log_L_solution - 20, log_L_solution + 10))
+        except ValueError as e:
+            print(f"Error finding L_lower: {e}")
+            print(f"equation_lower({log_L_solution - 20}): {equation_lower(log_L_solution - 20)}, equation_lower({log_L_solution + 10}): {equation_lower(log_L_solution + 10)}")
+            raise
         L_solution = 10**(log_L_solution)
-        #print(L_solution, L_upper, L_lower)
+
+
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
         L_var = np.max([L_upper - L_solution, L_solution - L_lower])
         #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s
-        return L_solution, L_var
+        return L_solution, L_var  # returns in units of 1e44 erg/s
 
-        # Ls = np.linspace(-5, 5)
-        # net_heating_rate = [equation(L) for L in Ls]
+
+        #return a_u(L_solution, L_var, L_var)
+
+        Ls = np.linspace(-100, 100)
+        net_heating_rate = [equation(L) for L in Ls]
         # net_heating_rate_min = [equation_lower(L) for L in Ls]
         # net_heating_rate_max = [equation_upper(L) for L in Ls]
         #L = 0
 
-        #return net_heating_rate, net_heating_rate_min, net_heating_rate_max
+        return net_heating_rate#, net_heating_rate_min, net_heating_rate_max
         #return equation(L), equation_upper(L), equation_lower(L)#net_heating_rate
+
+    # def estimate_variance_monte_carlo(self, mx, s0, T500_mean, T500_std, Tbs_mean, Tbs_std, 
+    #                               rad_factors_mean, rad_factors_std, 
+    #                               L_indep_factors_mean, L_indep_factors_std, 
+    #                               agn_factors_mean, agn_factors_std, num_samples=1000):
         
+    #     T500_mean = 1.0  # Mean of T500
+    #     T500_std = 0.1   # Standard deviation of T500
+    #     Tbs_mean = 1.0   # Mean of Tbs
+    #     Tbs_std = 0.1    # Standard deviation of Tbs
+    #     rad_factors_mean = 1.0  # Mean of rad_factors
+    #     rad_factors_std = 0.1   # Standard deviation of rad_factors
+    #     L_indep_factors_mean = 1.0  # Mean of L_indep_factors
+    #     L_indep_factors_std = 0.1   # Standard deviation of L_indep_factors
+    #     agn_factors_mean = 1.0  # Mean of agn_factors
+    #     agn_factors_std = 0.1   
+        
+    #     L500_samples = []
+    #     for _ in range(num_samples):
+    #         T500_sample = np.random.normal(T500_mean, T500_std)
+    #         Tbs_sample = np.random.normal(Tbs_mean, Tbs_std)
+    #         rad_factors_sample = np.random.normal(rad_factors_mean, rad_factors_std)
+    #         L_indep_factors_sample = np.random.normal(L_indep_factors_mean, L_indep_factors_std)
+    #         agn_factors_sample = np.random.normal(agn_factors_mean, agn_factors_std)
+            
+    #         L500_sample = self.L500_numerical(mx, s0, T500_sample, Tbs_sample, rad_factors_sample, 
+    #                                     L_indep_factors_sample, agn_factors_sample)
+    #         L500_samples.append(L500_sample)
+        
+    #     L500_samples = np.array(L500_samples)
+    #     variance = np.var(L500_samples)
+    #     return variance    
 
 def Linj_from_L500(logL500, bound=None):
     # calculate Linj for a given L500
     if bound:
         if bound=='min': # minimize Linj by taking lowest b, m values
-            b = 10 #- 0.11
-            m = 0.38 #- 0.03
+            b = 10 - 0.11
+            m = 0.38 - 0.03
         elif bound=='max': # maximize  Linj by taking highest b, m values
-            b = 10 #+ 0.11
-            m = 0.38 #+ 0.03
+            b = 10 + 0.11
+            m = 0.38 + 0.03
     else:
         b = 10
         m = 0.38
@@ -582,16 +635,22 @@ def Linj_from_L500(logL500, bound=None):
 def T500_from_L500(logL500, bound=None):
     if bound:
         if bound=='max': # maximize T by taking lowest b, m values
-            b = -2.34 #- 0.09
-            m = 4.71 #- 0.26
+            b = -2.34 - 0.09
+            m = 4.71 - 0.26
         elif bound=='min': # minimize T by taking highest b, m values
-            b = -2.34 #+ 0.09
-            m = 4.71 #+ 0.26
+            b = -2.34 + 0.09
+            m = 4.71 + 0.26
     else:
         b = -2.34
         m = 4.71
     logT = (logL500 - b)/m
     return np.power(10, logT) * 1e-6 # in GeV
+
+# def T500_from_L500_unc(logL500):
+#     b = a_u(-2.34, 0.09, 0.09)
+#     m = a_u(4.71, 0.26, 0.26)
+#     logT = (logL500 - b)/m
+#     return np.power(10, logT) * 1e-6 # in GeV
 
 def L500_from_T500(T500):
     logT = np.log10(T500*1e6)
@@ -600,6 +659,10 @@ def L500_from_T500(T500):
 def L500_from_Linj(Linj):
     logMbh = np.log10(Linj/1e44) + 9.5
     return (logMbh - 10) / 0.38
+
+
+
+
 
 
 

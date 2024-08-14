@@ -29,7 +29,7 @@ boundary_func = interp1d(mchi_values, s0_max, kind='linear', fill_value='extrapo
 
 def chi_squared(model, data, variance, add_var=0): # take lists of model prediction, data, and variance of same length
     # TODO: add second source of variance
-    total_var = variance**2 + add_var**2
+    total_var = variance**2 + model**2#+ add_var**2
     #return sum((model[i]-data[i].value)**2/(total_var[i]) for i in range(len(data)))
     return np.sum((model - data)**2 / total_var)
 
@@ -51,8 +51,9 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     s0 = 10**log_s0
     mx = 10**log_mx
 
+    # prior based on interaction rate limit
     if s0>boundary_func(mx):
-        print('outside prior')
+        #print('outside prior', s0, mx)
         return -np.inf
     #constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 

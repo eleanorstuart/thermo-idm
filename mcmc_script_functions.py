@@ -23,7 +23,7 @@ def create_initial_state(nwalkers, ndim):
     initial=np.zeros((nwalkers, ndim))
 
     # initialize walkers
-    log_sigma0 = np.random.uniform(low=-40, high=-20, size=nwalkers).astype(np.float128)
+    log_sigma0 = np.random.uniform(low=-40, high=-24, size=nwalkers).astype(np.float128)
     log_mx = np.random.uniform(low=-4, high=-1, size=nwalkers).astype(np.float128)
 
     initial[:,0]=log_sigma0

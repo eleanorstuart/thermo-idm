@@ -63,7 +63,7 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     #     predicted_werr = np.array([nfw.L500_analytic_eddington(mx, constant, frac_L=multfactor) for nfw in nfws])
     # else:
     #     raise ValueError("Invalid method. Expected 'analytic' or 'eddington'.")
-    variances_obs = np.array([nfw.L_err for nfw in nfws])
+    #variances_obs = np.array([nfw.L_err for nfw in nfws])
 
     predicted_werr = np.array([nfw.L500_numerical(mx, s0) for nfw in nfws])
     predicted, variances_pred = zip(*predicted_werr)
@@ -74,7 +74,7 @@ def log_lik(p0, obs, nfws, variances=None, multfactor=1, agn_model='iqbal'):
     #predicted = np.array([p.value for p in predicted_werr])
     #print(predicted, obs)
 
-    X2 = chi_squared(predicted, obs, variances_obs, add_var=variances_pred)
+    X2 = chi_squared(predicted, obs, variances, add_var=variances_pred)
     return -X2/2
 
 def log_lik1(p0, obs, nfws, variances, multagn=1, mx=0.01):

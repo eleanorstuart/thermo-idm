@@ -545,7 +545,7 @@ class Cluster_werr():
 
         if s0<=1e-25:
             lower = -5
-            upper = 20
+            upper = 30
         elif s0>1e-25 and s0<=1e-24:
             lower = -1
             upper = 40
@@ -579,13 +579,14 @@ class Cluster_werr():
 
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
         L_var = np.max([L_upper - L_solution, L_solution - L_lower])
+        #L_var = L_upper - L_lower / 2
         #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s
         return L_solution, L_var  # returns in units of 1e44 erg/s
 
 
         #return a_u(L_solution, L_var, L_var)
 
-        Ls = np.linspace(-20, 250)
+        Ls = np.linspace(-10, 250)
         net_heating_rate = [equation(L) for L in Ls]
         net_heating_rate_min = [equation_lower(L) for L in Ls]
         net_heating_rate_max = [equation_upper(L) for L in Ls]

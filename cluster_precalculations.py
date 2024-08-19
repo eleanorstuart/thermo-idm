@@ -200,6 +200,7 @@ class PreCalculations:
         except ValueError as e:
                 print(f"Error finding log_L_solution: {e}")
                 print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
+                print(f"sigma0: {s0}, mx: {mx}, scaling_params: {scaling_params}, M500: {M500}")
                 try:
                     result = root_scalar(equation, x0=0)
                     if result.converged:

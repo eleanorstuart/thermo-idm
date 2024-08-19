@@ -3,7 +3,7 @@ import numpy as np
 from astropy import units as u
 from astropy import constants as const
 
-from scipy.optimize import brentq
+from scipy.optimize import brentq, root_scalar
 
 from asymmetric_uncertainty_mod import a_u
 from cluster_functions import c
@@ -200,7 +200,15 @@ class PreCalculations:
         except ValueError as e:
                 print(f"Error finding log_L_solution: {e}")
                 print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
-                raise
+                try:
+                    result = root_scalar(equation, x0=0)
+                    if result.converged:
+                        log_L_solution = result.root
+                    else:
+                        raise ValueError("root_scalar did not converge")
+                except Exception as e:
+                    print(f"Error finding log_L_solution with root_scalar: {e}")
+                    raise
 
         L_solution = 10**(log_L_solution)
 

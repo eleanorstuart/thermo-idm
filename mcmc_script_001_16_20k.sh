@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=kmpardo_1230
 #SBATCH --partition=main
-#SBATCH --nodes=2
-#SBATCH --ntasks=16
-#SBATCH --cpus-per-task=4
+#SBATCH --nodes=4
+#SBATCH --ntasks=32
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
 #SBATCH --time=48:00:00
 #SBATCH --output=/slurm_outputs/%j.out

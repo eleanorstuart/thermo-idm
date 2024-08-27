@@ -543,9 +543,12 @@ class Cluster_werr():
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
-        if s0<=1e-25:
+        if s0<=1e-26:
             lower = -5
             upper = 10
+        elif s0>1e-26 and s0<=1e-25:
+            lower = -3
+            upper = 20
         elif s0>1e-25 and s0<=1e-24:
             lower = -1
             upper = 40
@@ -558,30 +561,31 @@ class Cluster_werr():
             log_L_solution = brentq(equation, lower, upper)
         except ValueError as e:
                 print(f"Error finding log_L_solution: {e}")
-                print(f"equation(lower): {equation(lower)}, equation(upper): {equation(upper)}")
+                print('s0:', s0)
+                print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
                 raise
 
-        try:
-            L_upper = 10**(brentq(equation_upper, log_L_solution, log_L_solution + 200))
-        except ValueError as e:
-            print(f"Error finding L_upper: {e}")
-            print(f"equation_upper({log_L_solution}): {equation_upper(log_L_solution)}, equation_upper({log_L_solution + 200}): {equation_upper(log_L_solution + 200)}")
-            raise
+        # try:
+        #     L_upper = 10**(brentq(equation_upper, log_L_solution, log_L_solution + 200))
+        # except ValueError as e:
+        #     print(f"Error finding L_upper: {e}")
+        #     print(f"equation_upper({log_L_solution}): {equation_upper(log_L_solution)}, equation_upper({log_L_solution + 200}): {equation_upper(log_L_solution + 200)}")
+        #     raise
 
-        try:
-            L_lower = 10**(brentq(equation_lower, log_L_solution - 20, log_L_solution))
-        except ValueError as e:
-            print(f"Error finding L_lower: {e}")
-            print(f"equation_lower({log_L_solution - 20}): {equation_lower(log_L_solution - 20)}, equation_lower({log_L_solution}): {equation_lower(log_L_solution)}")
-            raise
+        # try:
+        #     L_lower = 10**(brentq(equation_lower, log_L_solution - 20, log_L_solution))
+        # except ValueError as e:
+        #     print(f"Error finding L_lower: {e}")
+        #     print(f"equation_lower({log_L_solution - 20}): {equation_lower(log_L_solution - 20)}, equation_lower({log_L_solution}): {equation_lower(log_L_solution)}")
+        #     raise
         L_solution = 10**(log_L_solution)
 
 
         # could do L_upper - L_lower / 2 but I want to be generous with the error bars
-        L_var = np.max([L_upper - L_solution, L_solution - L_lower])
+        #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
         #L_var = L_upper - L_lower / 2
         #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s
-        return L_solution, L_var  # returns in units of 1e44 erg/s
+        return L_solution#, L_var  # returns in units of 1e44 erg/s
 
 
         #return a_u(L_solution, L_var, L_var)

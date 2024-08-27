@@ -113,51 +113,65 @@ class PreCalculations:
 
 
     def L500_numerical_sampled(self, M500, mx, s0, scaling_params):
-        measured_M500 = self.cluster.M500
-        measured_R500 = self.cluster.R500
-        measured_c500 = self.cluster.c500
+        #measured_M500 = self.cluster.M500
+        #measured_R500 = self.cluster.R500
+        #measured_c500 = self.cluster.c500
 
         # set M500 to sampled value for calculations
+        original_M500 = self.cluster.M500
+        original_R500 = self.cluster.R500
+        original_c500 = self.cluster.c500
         self.cluster.M500 = M500
 
-        # calculate factors based on sampled properties
-        # calculate minimum heating and cooling factors for the cluster
-        R500 = ((M500/(4*np.pi/3 * 500. * (self.cluster.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
-        r0 = 0.001*R500
-        rc = 0.1*R500
+        try:
+            # calculate factors based on sampled properties
+            # calculate minimum heating and cooling factors for the cluster
+            R500 = ((M500/(4*np.pi/3 * 500. * (self.cluster.rho_c).to(u.Msun/u.Mpc**3).value))**(1./3.))
+            r0 = 0.001*R500
+            rc = 0.1*R500
 
-        self.cluster.R500 = a_u(R500)
-        self.cluster.c500 = (5.71*(M500/(2*1e12 * h**-1))**(-0.084) * (1+self.cluster.z)**(-0.47))
+            self.cluster.R500 = a_u(R500)
+            self.cluster.c500 = (5.71*(M500/(2*1e12 * h**-1))**(-0.084) * (1+self.cluster.z)**(-0.47))
 
-        self.agn_factors = (self.cluster.total_heating_rate(a_u(r0), 
-                                                           a_u(R500), 
-                                                           rc, 
-                                                           Linj = 1*u.erg/u.s, 
-                                                           n=50)).to(u.erg/u.s).value.value
+            self.agn_factors = (self.cluster.total_heating_rate(a_u(r0), 
+                                       a_u(R500), 
+                                       rc, 
+                                       Linj = 1*u.erg/u.s, 
+                                       n=50)).to(u.erg/u.s).value.value
 
-        xs = np.logspace(-3, 0, num=50)
-        self.rs = xs*self.cluster.R500
+            xs = np.logspace(-3, 0, num=50)
+            self.rs = xs*self.cluster.R500
 
-        Tbs = np.asarray(self.cluster.T_g(self.rs, match_gaspari=False))
-        self.Tbs_norm = np.array([i.value for i in Tbs/(Tbs[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy()))]) # units 1/K
+            Tbs = np.asarray(self.cluster.T_g(self.rs, match_gaspari=False))
+            self.Tbs_norm = np.array([i.value for i in Tbs/(Tbs[-1]*u.GeV.to(u.K, equivalencies=u.temperature_energy()))]) # units 1/K
 
-        self.rad_factors = self.cluster.total_cooling_rate(a_u(r0), 
-                                                          a_u(R500), 
-                                                          vol_rate='gfe', 
-                                                          Tb=self.Tbs_norm).value
-        
-        self.L_indep_factors = np.array([i.value for i in np.array(self.D(self.rs)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg])
-        self.Tx_by_mx = np.asarray([t.value for t in self.cluster.Tx_over_mx(self.rs)])
+            self.rad_factors = self.cluster.total_cooling_rate(a_u(r0), 
+                                      a_u(R500), 
+                                      vol_rate='gfe', 
+                                      Tb=self.Tbs_norm).value
+            
+            self.L_indep_factors = np.array([i.value for i in np.array(self.D(self.rs)*(u.Mpc/u.cm).to(1)**3)/GeV_to_erg])
+            self.Tx_by_mx = np.asarray([t.value for t in self.cluster.Tx_over_mx(self.rs)])
 
 
-        L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
-        T_chi = np.array(self.Tx_by_mx*mx) # units GeV
+            L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
+            T_chi = np.array(self.Tx_by_mx*mx) # units GeV
+
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            raise
+
+        finally:
+            # restore original values
+            self.cluster.M500 = original_M500
+            self.cluster.R500 = original_R500
+            self.cluster.c500 = original_c500
 
 
         # restore original values
-        self.cluster.M500 = measured_M500 
-        self.cluster.R500 = measured_R500 
-        self.cluster.c500 = measured_c500
+        self.cluster.M500 = original_M500
+        self.cluster.R500 = original_R500
+        self.cluster.c500 = original_c500
 
         mLinj = scaling_params['mLinj']
         bLinj = scaling_params['bLinj']
@@ -167,26 +181,39 @@ class PreCalculations:
         def equation(logL): # L in 1e44 erg/s
             #print("logL", logL)
             T500 = T500_from_L500_sampled(logL,mT500, bT500)
-            T500k = T500*GeV_to_K
+            #T500k = T500*GeV_to_K
+            # Calculate T500 in logarithmic space to avoid overflow
+            T500_log = np.log10(T500_from_L500_sampled(logL, mT500, bT500))
+            T500k_log = T500_log + np.log10(GeV_to_K)
+            T500k = 10**T500k_log
             Tbs = np.multiply(self.Tbs_norm, T500k)
             #print(Tbs)
 
-            cooling_rate=np.sqrt(T500k)*self.rad_factors
+            #cooling_rate=np.sqrt(T500k)*self.rad_factors
+            # Calculate cooling rate in logarithmic space
+            cooling_rate_log = 0.5 * T500k_log + np.log10(self.rad_factors)
+            cooling_rate = 10**cooling_rate_log
 
-            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            #uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            # Calculate uth in logarithmic space
+            uth_log = 0.5 * np.log10(Tbs / mp_GeV + self.Tx_by_mx)
+            uth = 10**uth_log
             integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
             dm_cooling_rate = np.trapz(integrand, [r.value for r in self.rs])
 
             Linj=Linj_from_L500_sampled(logL, mLinj, bLinj)
             heating_rate = Linj * self.agn_factors
             #print(heating_rate)
-            #print('heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
+            print('L', logL, 'heating',heating_rate, 'cooling', cooling_rate, 'dm cooling', dm_cooling_rate)
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
-        if s0<=1e-25:
+        if s0<=1e-26:
+            lower = -2
+            upper = 3
+        if s0<=1e-25 and s0>1e-26:
             lower = -5
-            upper = 30
+            upper = 10
         elif s0>1e-25 and s0<=1e-24:
             lower = -1
             upper = 40
@@ -197,19 +224,22 @@ class PreCalculations:
         #print(lower, upper)
         try:
             log_L_solution = brentq(equation, lower, upper)
+            #print(log_L_solution)
+            #raise ValueError("brentq not working")
         except ValueError as e:
                 print(f"Error finding log_L_solution: {e}")
                 print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
                 print(f"sigma0: {s0}, mx: {mx}, scaling_params: {scaling_params}, M500: {M500}")
-                try:
-                    result = root_scalar(equation, x0=0)
-                    if result.converged:
-                        log_L_solution = result.root
-                    else:
-                        raise ValueError("root_scalar did not converge")
-                except Exception as e:
-                    print(f"Error finding log_L_solution with root_scalar: {e}")
-                    raise
+
+                # try:
+                #     result = root_scalar(equation, x0=upper, x1=upper+1, method='secant', bracket=[lower+5, upper+1])
+                #     if result.converged:
+                #         log_L_solution = result.root
+                #     else:
+                #         raise ValueError("root_scalar did not converge")
+                # except Exception as e:
+                #     print(f"Error finding log_L_solution with root_scalar: {e}")
+                #     raise
 
         L_solution = 10**(log_L_solution)
 

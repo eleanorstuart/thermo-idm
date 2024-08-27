@@ -545,7 +545,7 @@ class Cluster_werr():
 
         if s0<=1e-25:
             lower = -5
-            upper = 30
+            upper = 10
         elif s0>1e-25 and s0<=1e-24:
             lower = -1
             upper = 40
@@ -656,6 +656,7 @@ def T500_from_L500(logL500, bound=None):
         b = -2.34
         m = 4.71
     logT = (logL500 - b)/m
+    #return logT
     return np.power(10, logT) * 1e-6 # in GeV
 
 # def T500_from_L500_unc(logL500):
@@ -666,7 +667,7 @@ def T500_from_L500(logL500, bound=None):
 
 def L500_from_T500(T500):
     logT = np.log10(T500*1e6)
-    return -2.34 + 4.71*logT
+    return -2.34 + 4.71*logT # returns in 1e44 erg/s
 
 def L500_from_Linj(Linj):
     logMbh = np.log10(Linj/1e44) + 9.5

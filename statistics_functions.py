@@ -5,7 +5,7 @@ from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import pickle
 
-from equilibrium_functions import equil
+# from equilibrium_functions import equil
 from cluster_functions import c
 from asymmetric_uncertainty_mod import a_u
 
@@ -147,12 +147,12 @@ def log_likelihood_2(p0, data, var, clusters, pred_func: str): #pred_func is the
     return (-X2/2)
 
 
-def log_lik_eq(p0, T_data, var, clusters):
-    if p0[0]<-40 or p0[0]>-10:
-        return -np.inf
-    if p0[1]<-3 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
-        return -np.inf
-    #print(p0)
-    T_model = [brentq(equil, -10, 0, args=(c, p0[0], p0[1])) for c in clusters]
-    X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
-    return (-X2/2)
+# def log_lik_eq(p0, T_data, var, clusters):
+#     if p0[0]<-40 or p0[0]>-10:
+#         return -np.inf
+#     if p0[1]<-3 or 10**p0[1]>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
+#         return -np.inf
+#     #print(p0)
+#     T_model = [brentq(equil, -10, 0, args=(c, p0[0], p0[1])) for c in clusters]
+#     X2 = chi_squared(np.power(10,T_model)*u.GeV, T_data, var)
+#     return (-X2/2)

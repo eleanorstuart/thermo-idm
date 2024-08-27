@@ -2,7 +2,7 @@
 #SBATCH --account=kmpardo_1230
 #SBATCH --partition=main
 #SBATCH --nodes=4
-#SBATCH --ntasks=32
+#SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
 #SBATCH --time=48:00:00

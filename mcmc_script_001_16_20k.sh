@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
 #SBATCH --time=48:00:00
-#SBATCH --output=/slurm_outputs/%j.out
+#SBATCH --output=slurm_outputs/%j.out
 module purge
 eval "$(conda shell.bash hook)"
 conda activate idm

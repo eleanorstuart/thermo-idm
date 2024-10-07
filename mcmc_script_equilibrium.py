@@ -25,7 +25,7 @@ def run_mcmc():
     nwalkers = args.nwalkers
     nsteps = args.nsteps
 
-
+    import pickle
     # Open the data file
     with open('data/equilibrium_clusters.pkl', 'rb') as file:
         # Load the data into nfws_subset variable

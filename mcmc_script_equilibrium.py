@@ -32,7 +32,7 @@ def run_mcmc():
         nfws_subset = pickle.load(file)
 
     L_obs = [n.L500 for n in nfws_subset]
-    variances_obs = [n.L_err for n in nfws_subset]
+    variances_obs = np.array([n.L_err for n in nfws_subset])
 
 
     # prepare MCMC

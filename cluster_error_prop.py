@@ -565,71 +565,13 @@ class Cluster_werr():
                 print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
                 raise
 
-        # try:
-        #     L_upper = 10**(brentq(equation_upper, log_L_solution, log_L_solution + 200))
-        # except ValueError as e:
-        #     print(f"Error finding L_upper: {e}")
-        #     print(f"equation_upper({log_L_solution}): {equation_upper(log_L_solution)}, equation_upper({log_L_solution + 200}): {equation_upper(log_L_solution + 200)}")
-        #     raise
-
-        # try:
-        #     L_lower = 10**(brentq(equation_lower, log_L_solution - 20, log_L_solution))
-        # except ValueError as e:
-        #     print(f"Error finding L_lower: {e}")
-        #     print(f"equation_lower({log_L_solution - 20}): {equation_lower(log_L_solution - 20)}, equation_lower({log_L_solution}): {equation_lower(log_L_solution)}")
-        #     raise
         L_solution = 10**(log_L_solution)
 
-
-        # could do L_upper - L_lower / 2 but I want to be generous with the error bars
-        #L_var = np.max([L_upper - L_solution, L_solution - L_lower])
-        #L_var = L_upper - L_lower / 2
-        #return 10**(L_solution), 10**(L_upper), 10**(L_lower) # returns in units of 1e44 erg/s
         return L_solution#, L_var  # returns in units of 1e44 erg/s
 
 
-        #return a_u(L_solution, L_var, L_var)
 
-        Ls = np.linspace(-10, 250)
-        net_heating_rate = [equation(L) for L in Ls]
-        net_heating_rate_min = [equation_lower(L) for L in Ls]
-        net_heating_rate_max = [equation_upper(L) for L in Ls]
-        #L = 0
-
-        return net_heating_rate, net_heating_rate_min, net_heating_rate_max
-        #return equation(L), equation_upper(L), equation_lower(L)#net_heating_rate
-
-    # def estimate_variance_monte_carlo(self, mx, s0, T500_mean, T500_std, Tbs_mean, Tbs_std, 
-    #                               rad_factors_mean, rad_factors_std, 
-    #                               L_indep_factors_mean, L_indep_factors_std, 
-    #                               agn_factors_mean, agn_factors_std, num_samples=1000):
-        
-    #     T500_mean = 1.0  # Mean of T500
-    #     T500_std = 0.1   # Standard deviation of T500
-    #     Tbs_mean = 1.0   # Mean of Tbs
-    #     Tbs_std = 0.1    # Standard deviation of Tbs
-    #     rad_factors_mean = 1.0  # Mean of rad_factors
-    #     rad_factors_std = 0.1   # Standard deviation of rad_factors
-    #     L_indep_factors_mean = 1.0  # Mean of L_indep_factors
-    #     L_indep_factors_std = 0.1   # Standard deviation of L_indep_factors
-    #     agn_factors_mean = 1.0  # Mean of agn_factors
-    #     agn_factors_std = 0.1   
-        
-    #     L500_samples = []
-    #     for _ in range(num_samples):
-    #         T500_sample = np.random.normal(T500_mean, T500_std)
-    #         Tbs_sample = np.random.normal(Tbs_mean, Tbs_std)
-    #         rad_factors_sample = np.random.normal(rad_factors_mean, rad_factors_std)
-    #         L_indep_factors_sample = np.random.normal(L_indep_factors_mean, L_indep_factors_std)
-    #         agn_factors_sample = np.random.normal(agn_factors_mean, agn_factors_std)
-            
-    #         L500_sample = self.L500_numerical(mx, s0, T500_sample, Tbs_sample, rad_factors_sample, 
-    #                                     L_indep_factors_sample, agn_factors_sample)
-    #         L500_samples.append(L500_sample)
-        
-    #     L500_samples = np.array(L500_samples)
-    #     variance = np.var(L500_samples)
-    #     return variance    
+   
 
 def Linj_from_L500(logL500, bound=None):
     # calculate Linj for a given L500
@@ -663,11 +605,6 @@ def T500_from_L500(logL500, bound=None):
     #return logT
     return np.power(10, logT) * 1e-6 # in GeV
 
-# def T500_from_L500_unc(logL500):
-#     b = a_u(-2.34, 0.09, 0.09)
-#     m = a_u(4.71, 0.26, 0.26)
-#     logT = (logL500 - b)/m
-#     return np.power(10, logT) * 1e-6 # in GeV
 
 def L500_from_T500(T500):
     logT = np.log10(T500*1e6)
@@ -680,11 +617,3 @@ def L500_from_Linj(Linj):
 
 
 
-
-
-
-# def temp_from_luminosity(luminosity):
-#     lum = luminosity.to(u.erg / u.s)
-#     log_T = (np.log10(lum.value) - 45.06) / 2.88 + np.log10(6)
-#     T = np.power(10, log_T) * u.keV
-#     return T.to(u.GeV)

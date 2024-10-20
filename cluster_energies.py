@@ -4,9 +4,13 @@ from astropy import units as u
 
 from asymmetric_uncertainty_mod import a_u
 
+
+
 class Energies:
     def __init__(self, cluster):
         self.cluster = cluster
+        self.abs_potential_energy = self.abs_potential_energy
+        self.thermal_energy = self.thermal_energy # in MCMC this will need to be normalized to T500
 
     @property
     def thermal_energy(self):

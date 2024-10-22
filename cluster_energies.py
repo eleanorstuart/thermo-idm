@@ -10,8 +10,18 @@ class Energies:
     def __init__(self, cluster):
         self.cluster = cluster
         self.abs_potential_energy = self.abs_potential_energy
-        self.thermal_energy = self.thermal_energy # in MCMC this will need to be normalized to T500
+        self.thermal_energy_norm = self.thermal_energy_norm() # in MCMC this needs to be multiplied by T500 to get the thermal energy
 
+
+    def thermal_energy_norm(self):
+        rs = np.logspace(np.log10(0.15), 0)*self.cluster.R500
+        Tgs = self.cluster.T_g(rs)
+        T500=Tgs[-1]
+        Tgs_norm = np.array([i.value for i in Tgs/(T500*u.GeV.to(u.K, equivalencies=u.temperature_energy()))])
+
+        avg_Tg_norm = (np.trapz(4*np.pi * rs**2 * Tgs_norm, rs))/(4./3 * np.pi * (self.cluster.R500**3 - (0.15*self.cluster.R500)**3))
+        return 3./2 * avg_Tg_norm
+    
     @property
     def thermal_energy(self):
         # Implement your kinetic energy calculation here

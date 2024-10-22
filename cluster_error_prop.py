@@ -571,6 +571,58 @@ class Cluster_werr():
 
 
 
+    def L500_numerical_conservative(self, mx, s0, cluster_age=10): # cluster age in Gyr
+        L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
+        T_chi = np.array(self.Tx_by_mx*mx)
+
+        cluster_age_s = cluster_age*u.Gyr.to(u.s) # convert Gyr to s 
+
+        def equation(logL): # L in 1e44 erg/s
+            T500 = T500_from_L500(logL, bound=None)
+            T500k = T500*GeV_to_K
+            Tbs = np.multiply(self.Tbs_norm, T500k)
+            #print(Tbs)
+
+            cooling_rate=np.sqrt(T500k)*self.rad_factors
+
+            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+            dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
+
+            Linj=Linj_from_L500(logL)
+            heating_rate = Linj * self.agn_factors
+            #print(heating_rate)
+            #print('heating',heating_rate.value, 'cooling', cooling_rate.value, 'dm cooling', dm_cooling_rate.value)
+
+            #total_energy = self.energies.abs_potential_energy + self.energies.thermal_energy_norm*T500 # check this 
+            return np.abs(heating_rate - cooling_rate - dm_cooling_rate) - np.abs(total_energy/cluster_age_s)
+
+
+
+        if s0<=1e-26:
+            lower = -5
+            upper = 10
+        elif s0>1e-26 and s0<=10**-25.25:
+            lower = -3
+            upper = 20
+        elif s0>10**-25.25 and s0<=1e-24:
+            lower = -1
+            upper = 40
+        elif s0>1e-24:
+            lower = 0
+            upper = 50
+
+        try:
+            log_L_solution = brentq(equation, lower, upper)
+        except ValueError as e:
+                print(f"Error finding log_L_solution: {e}")
+                print('s0:', s0)
+                print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
+                raise
+
+        L_solution = 10**(log_L_solution)
+
+        return L_solution#, L_var  # returns in units of 1e44 erg/s
    
 
 def Linj_from_L500(logL500, bound=None):

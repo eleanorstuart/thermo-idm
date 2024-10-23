@@ -642,7 +642,7 @@ def Linj_from_L500(logL500, bound=None):
     Mbh = np.power(10, logMbh)#*u.Msun
     return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))
 
-def T500_from_L500(logL500, bound=None):
+def T500_from_L500(logL500, bound=None): # enter L in 1e44 erg/s
     if bound:
         if bound=='max': # maximize T by taking lowest b, m values
             b = -2.34 - 0.09

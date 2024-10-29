@@ -576,6 +576,7 @@ class Cluster_werr():
         T_chi = np.array(self.Tx_by_mx*mx)
 
         cluster_age_s = cluster_age*u.Gyr.to(u.s) # convert Gyr to s 
+        G_conv = (const.G/const.c**2).to(u.Mpc/u.Msun)
 
         def equation(logL): # L in 1e44 erg/s
             T500 = T500_from_L500(logL, bound=None)
@@ -584,6 +585,32 @@ class Cluster_werr():
             #print(Tbs)
 
             cooling_rate=np.sqrt(T500k)*self.rad_factors
+
+
+            pe = G_conv * (self.M500.value)**2*u.Msun**2/(self.R500.value*u.Mpc)
+
+            #L = 10**logL
+            xmin = 0.001
+            xmax = 1
+            xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
+            rs = xs*self.R500
+            
+            
+            Tbs = np.array([T.value for T in np.asarray(self.T_g(rs, match_gaspari=True))]) # in GeV
+            Tbs_norm = Tbs/Tbs[-1] # unitless
+            Tbs_Ldep = Tbs_norm * T500_from_L500(logL)
+            nbs = [n.value for n in np.asarray(self.n_e(rs))] # in 1/Mpc^3
+            ke_b = (np.trapz(4*np.pi * rs**2 * 3./2* np.multiply(Tbs_Ldep,nbs),rs)).value*u.GeV
+            
+            avg_rho_x = self.M500.value/(4./3*np.pi*self.R500.value**3) # Msun/Mpc3
+            #Tx_by_mx_float = [tm.value for tm in nfw.Tx_by_mx]
+            ke_x = (np.trapz(4*np.pi*rs**2 * 3./2*avg_rho_x*self.Tx_by_mx, rs).value)*u.Msun
+            #ke_x = 0 * u.erg
+            E_tot =  (pe+ke_b+ke_x).to(u.erg, equivalencies=u.mass_energy()).value
+
+
+
+
 
             uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
             integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
@@ -595,8 +622,12 @@ class Cluster_werr():
             #print('heating',heating_rate.value, 'cooling', cooling_rate.value, 'dm cooling', dm_cooling_rate.value)
 
             #total_energy = self.energies.abs_potential_energy + self.energies.thermal_energy_norm*T500 # check this 
-            return np.abs(heating_rate - cooling_rate - dm_cooling_rate) - np.abs(total_energy/cluster_age_s)
+            cluster_age_s = 10*u.Gyr.to(u.s) # convert Gyr to s
+            return np.abs(E_tot/cluster_age_s) - np.abs(heating_rate - cooling_rate - dm_cooling_rate)
 
+        logLs = np.linspace(-20, 20, 100)
+        eqs = [equation(logL) for logL in logLs]
+        return logLs, eqs
 
 
         if s0<=1e-26:
@@ -623,6 +654,81 @@ class Cluster_werr():
         L_solution = 10**(log_L_solution)
 
         return L_solution#, L_var  # returns in units of 1e44 erg/s
+
+
+
+    def L500_numerical_total_energy(self, mx, s0, cluster_age=10): # cluster age in Gyr
+        L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
+        T_chi = np.array(self.Tx_by_mx*mx)
+
+        cluster_age_s = cluster_age*u.Gyr.to(u.s) # convert Gyr to s 
+
+        G_conv = (const.G/const.c**2).to(u.Mpc/u.Msun)
+
+        def equation(logL): # L in 1e44 erg/s
+            T500 = T500_from_L500(logL, bound=None)
+            T500k = T500*GeV_to_K
+            Tbs = np.multiply(self.Tbs_norm, T500k)
+
+
+            pe = G_conv * (self.M500.value)**2*u.Msun**2/(self.R500.value*u.Mpc)
+
+            #L = 10**logL
+            xmin = 0.001
+            xmax = 1
+            xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
+            rs = xs*self.R500
+            
+            
+            Tbs = np.array([T.value for T in np.asarray(self.T_g(rs, match_gaspari=True))]) # in GeV
+            Tbs_norm = Tbs/Tbs[-1] # unitless
+            Tbs_Ldep = Tbs_norm * T500_from_L500(logL)
+            nbs = [n.value for n in np.asarray(self.n_e(rs))] # in 1/Mpc^3
+            ke_b = (np.trapz(4*np.pi * rs**2 * 3./2* np.multiply(Tbs_Ldep,nbs),rs)).value*u.GeV
+            
+            avg_rho_x = self.M500.value/(4./3*np.pi*self.R500.value**3) # Msun/Mpc3
+            #Tx_by_mx_float = [tm.value for tm in nfw.Tx_by_mx]
+            ke_x = (np.trapz(4*np.pi*rs**2 * 3./2*avg_rho_x*self.Tx_by_mx, rs).value)*u.Msun
+            #ke_x = 0 * u.erg
+            E_tot =  (pe+ke_b+ke_x).to(u.erg, equivalencies=u.mass_energy()).value
+
+
+            uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
+            integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
+            dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
+
+            cluster_age_s = 10*u.Gyr.to(u.s) # convert Gyr to s
+            return np.abs(E_tot/cluster_age_s) - np.abs(dm_cooling_rate)
+
+        logLs = np.linspace(-20, 20, 100)
+        eqs = [equation(logL) for logL in logLs]
+        return logLs, eqs
+
+
+        if s0<=1e-26:
+            lower = -10
+            upper = 20
+        elif s0>1e-26 and s0<=10**-25.25:
+            lower = -3
+            upper = 20
+        elif s0>10**-25.25 and s0<=1e-24:
+            lower = -1
+            upper = 40
+        elif s0>1e-24:
+            lower = 0
+            upper = 50
+
+        try:
+            log_L_solution = brentq(equation, lower, upper)
+        except ValueError as e:
+                print(f"Error finding log_L_solution: {e}")
+                print('s0:', s0)
+                print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
+                raise
+
+        L_solution = 10**(log_L_solution)
+
+        return L_solution#, L_var  # returns in units of 1e44 erg/s        
    
 
 def Linj_from_L500(logL500, bound=None):
@@ -642,7 +748,7 @@ def Linj_from_L500(logL500, bound=None):
     Mbh = np.power(10, logMbh)#*u.Msun
     return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))
 
-def T500_from_L500(logL500, bound=None): # enter L in 1e44 erg/s
+def T500_from_L500(logL500, bound=None): # logL=log(L/1e44erg/s)
     if bound:
         if bound=='max': # maximize T by taking lowest b, m values
             b = -2.34 - 0.09
@@ -669,3 +775,26 @@ def L500_from_Linj(Linj):
 
 
 
+def E_tot(nfw, L=None): # remove ".value" once ive gotten units figured out
+    G_conv = (const.G/const.c**2).to(u.Mpc/u.Msun)
+    pe = G_conv * (nfw.M500.value)**2*u.Msun**2/(nfw.R500.value*u.Mpc)
+    
+    if not L:
+        L = nfw.L500.value
+    xmin = 0.001
+    xmax = 1
+    xs = np.logspace(np.log10(xmin), np.log10(xmax), num=50)
+    rs = xs*nfw.R500
+    
+    
+    Tbs = np.array([T.value for T in np.asarray(nfw.T_g(rs, match_gaspari=True))]) # in GeV
+    Tbs_norm = Tbs/Tbs[-1] # unitless
+    Tbs_Ldep = Tbs_norm * T500_from_L500(np.log10(L))
+    nbs = [n.value for n in np.asarray(nfw.n_e(rs))] # in 1/Mpc^3
+    ke_b = (np.trapz(4*np.pi * rs**2 * 3./2* np.multiply(Tbs_Ldep,nbs),rs)).value*u.GeV
+    
+    avg_rho_x = nfw.M500.value/(4./3*np.pi*nfw.R500.value**3) # Msun/Mpc3
+    #Tx_by_mx_float = [tm.value for tm in nfw.Tx_by_mx]
+    ke_x = (np.trapz(4*np.pi*rs**2 * 3./2*avg_rho_x*nfw.Tx_by_mx, rs).value)*u.Msun
+    #ke_x = 0 * u.erg
+    return (pe+ke_b+ke_x).to(u.erg, equivalencies=u.mass_energy()).value

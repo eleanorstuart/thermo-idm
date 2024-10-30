@@ -798,3 +798,5 @@ def E_tot(nfw, L=None): # remove ".value" once ive gotten units figured out
     ke_x = (np.trapz(4*np.pi*rs**2 * 3./2*avg_rho_x*nfw.Tx_by_mx, rs).value)*u.Msun
     #ke_x = 0 * u.erg
     return (pe+ke_b+ke_x).to(u.erg, equivalencies=u.mass_energy()).value
+
+

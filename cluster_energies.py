@@ -9,8 +9,8 @@ from asymmetric_uncertainty_mod import a_u
 class Energies:
     def __init__(self, cluster):
         self.cluster = cluster
-        self.abs_potential_energy = self.abs_potential_energy
-        self.thermal_energy_norm = self.thermal_energy_norm() # in MCMC this needs to be multiplied by T500 to get the thermal energy
+       # self.abs_potential_energy = self.abs_potential_energy
+       # self.thermal_energy_norm = self.thermal_energy_norm() # in MCMC this needs to be multiplied by T500 to get the thermal energy
 
 
     def thermal_energy_norm(self):

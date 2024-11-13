@@ -20,10 +20,12 @@ def run_mcmc():
     parser.add_argument('rmin', type=float, help='lower bound for integration when calculating heating and cooling rates')
     parser.add_argument('nwalkers', type=int, help='number of walkers')
     parser.add_argument('nsteps', type=int, help='number of steps chains should run')
+    parser.add_argument('fx', type=float, help='fraction of idm')
     args = parser.parse_args()
     rmin = args.rmin
     nwalkers = args.nwalkers
     nsteps = args.nsteps
+    fx = args.fx
 
     import pickle
     # Open the data file
@@ -54,7 +56,7 @@ def run_mcmc():
         sampler = emcee.EnsembleSampler(nwalkers,
                                 ndim,
                                 log_lik,
-                                args=[L_obs, nfws_subset, variances_obs, 1])
+                                args=[L_obs, nfws_subset, variances_obs, fx])
         state = sampler.run_mcmc(initial, 1000, progress=True)
         sampler.reset()
 

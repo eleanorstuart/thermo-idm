@@ -470,15 +470,15 @@ class Cluster_werr():
         return np.power(10, logL500) * 1e44
 
 
-    def L500_numerical(self, mx, s0):
-        L_indep_factors_full = np.divide(self.L_indep_factors*s0,((mx + mp_GeV) ** 2))
+    def L500_numerical(self, mx, s0, fx=1.0):
+        L_indep_factors_full = np.divide(self.L_indep_factors*s0*fx,((mx + mp_GeV) ** 2))
         T_chi = np.array(self.Tx_by_mx*mx) 
 
-        L_indep_factors_full_min = np.divide(self.precalc.L_indep_factors_min*s0,((mx + mp_GeV) ** 2))
-        T_chi_min = np.array(self.precalc.Tx_by_mx_min*mx)
+        #L_indep_factors_full_min = np.divide(self.precalc.L_indep_factors_min*s0,((mx + mp_GeV) ** 2))
+        #T_chi_min = np.array(self.precalc.Tx_by_mx_min*mx)
 
-        L_indep_factors_full_max = np.divide(self.precalc.L_indep_factors_max*s0,((mx + mp_GeV) ** 2))
-        T_chi_max = np.array(self.precalc.Tx_by_mx_max*mx)
+        #L_indep_factors_full_max = np.divide(self.precalc.L_indep_factors_max*s0,((mx + mp_GeV) ** 2))
+        #T_chi_max = np.array(self.precalc.Tx_by_mx_max*mx)
 
         def equation(logL): # L in 1e44 erg/s
             T500 = T500_from_L500(logL, bound=None)

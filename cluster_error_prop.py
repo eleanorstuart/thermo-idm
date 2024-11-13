@@ -543,18 +543,33 @@ class Cluster_werr():
 
             return heating_rate - cooling_rate - dm_cooling_rate
 
-        if s0<=1e-26:
-            lower = -5
-            upper = 10
-        elif s0>1e-26 and s0<=10**-25.25:
-            lower = -3
-            upper = 20
-        elif s0>10**-25.25 and s0<=1e-24:
-            lower = -1
-            upper = 40
-        elif s0>1e-24:
-            lower = 0
-            upper = 50
+        if fx == 1.0:
+            if s0<=1e-26:
+                lower = -5
+                upper = 10
+            elif s0>1e-26 and s0<=10**-25.25:
+                lower = -3
+                upper = 20
+            elif s0>10**-25.25 and s0<=1e-24:
+                lower = -1
+                upper = 40
+            elif s0>1e-24:
+                lower = 0
+                upper = 50
+        elif fx == 0.1:
+            if s0<=1e-26:
+                lower = -5
+                upper = 10
+            elif s0>1e-26 and s0<=10**-25.25:
+                lower = -3
+                upper = 20
+            elif s0>10**-25.25 and s0<=1e-24:
+                lower = -3
+                upper = 40
+            elif s0>1e-24:
+                lower = 0
+                upper = 50
+
 
 
         try:

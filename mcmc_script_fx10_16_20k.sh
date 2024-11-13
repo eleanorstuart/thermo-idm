@@ -10,4 +10,4 @@
 module purge
 eval "$(conda shell.bash hook)"
 conda activate idm
-python mcmc_script_nsteps.py 0.001 16 20000 0.1
+python mcmc_script_equilibrium.py 0.001 16 20000 0.1

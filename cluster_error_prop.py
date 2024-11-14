@@ -475,7 +475,6 @@ class Cluster_werr():
         if mpsi==None: # default to mpsi=mx
             T_chi = np.array(self.Tx_by_mx*mx) 
         else: # use mpsi if provided
-            mpsi = mpsi
             T_chi = np.array(self.Tx_by_mx/(fx/mx + (1-fx)/mpsi))
 
         def equation(logL): # L in 1e44 erg/s

@@ -27,7 +27,7 @@ def run_mcmc():
     nwalkers = args.nwalkers
     nsteps = args.nsteps
     fx = args.fx
-    mpsi = args.mpsi
+    mpsi = args.mpsi if args.mpsi else None
 
     import pickle
     # Open the data file

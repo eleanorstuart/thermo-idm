@@ -470,15 +470,13 @@ class Cluster_werr():
         return np.power(10, logL500) * 1e44
 
 
-    def L500_numerical(self, mx, s0, fx=1.0):
+    def L500_numerical(self, mx, s0, fx=1.0, mpsi=None): # mpsi should be provided as a float in GeV
         L_indep_factors_full = np.divide(self.L_indep_factors*s0*fx,((mx + mp_GeV) ** 2))
-        T_chi = np.array(self.Tx_by_mx*mx) 
-
-        #L_indep_factors_full_min = np.divide(self.precalc.L_indep_factors_min*s0,((mx + mp_GeV) ** 2))
-        #T_chi_min = np.array(self.precalc.Tx_by_mx_min*mx)
-
-        #L_indep_factors_full_max = np.divide(self.precalc.L_indep_factors_max*s0,((mx + mp_GeV) ** 2))
-        #T_chi_max = np.array(self.precalc.Tx_by_mx_max*mx)
+        if mpsi==None: # default to mpsi=mx
+            T_chi = np.array(self.Tx_by_mx*mx) 
+        else: # use mpsi if provided
+            mpsi = mpsi
+            T_chi = np.array(self.Tx_by_mx/(fx/mx + (1-fx)/mpsi))
 
         def equation(logL): # L in 1e44 erg/s
             T500 = T500_from_L500(logL, bound=None)
@@ -494,54 +492,10 @@ class Cluster_werr():
 
             Linj=Linj_from_L500(logL)
             heating_rate = Linj * self.agn_factors
-            #print(heating_rate)
-            #print('heating',heating_rate.value, 'cooling', cooling_rate.value, 'dm cooling', dm_cooling_rate.value)
+
 
             return heating_rate - cooling_rate - dm_cooling_rate
         
-        def equation_upper(logL): # yields L upper bound from highest mass, highest temperature, lowest AGN heating (lowest net heating for a given L)
-            T500 = T500_from_L500(logL, bound='max')
-            T500k = T500*GeV_to_K
-            Tbs = np.multiply(self.precalc.Tbs_norm_max, T500k)
-            #Tbs = np.multiply(self.Tbs_norm, T500k)
-
-            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_max
-            #cooling_rate=np.sqrt(T500k)*self.rad_factors
-
-            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_max)
-            #uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
-            integrand = (L_indep_factors_full_max*uth)*(Tbs-T_chi_max)
-            #integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
-            dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_max]))
-            #dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
-
-            Linj=Linj_from_L500(logL, bound='min')
-            heating_rate = Linj * self.precalc.agn_factors_max
-            #heating_rate = Linj * self.agn_factors
-
-            return heating_rate - cooling_rate - dm_cooling_rate
-
-        def equation_lower(logL): # yields L lower bound from lowest mass, lowest temperature, highest AGN heating (highest net heating for a given L)
-            T500 = T500_from_L500(logL, bound='min')
-            T500k = T500*GeV_to_K
-            Tbs = np.multiply(self.precalc.Tbs_norm_min, T500k)
-            #Tbs = np.multiply(self.Tbs_norm, T500k)
-
-            cooling_rate=np.sqrt(T500k)*self.precalc.rad_factors_min
-            #cooling_rate=np.sqrt(T500k)*self.rad_factors
-
-            uth = np.sqrt(Tbs/mp_GeV + self.precalc.Tx_by_mx_min)
-            #uth = np.sqrt(Tbs/mp_GeV + self.Tx_by_mx)
-            integrand = (L_indep_factors_full_min*uth)*(Tbs-T_chi_min)
-            #integrand = (L_indep_factors_full*uth)*(Tbs-T_chi)
-            dm_cooling_rate = np.trapz(integrand, np.array([r.value for r in self.precalc.rs_min]))
-            #dm_cooling_rate = np.trapz(integrand, self.rs_Mpc)
-
-            Linj=Linj_from_L500(logL, bound='max')
-            heating_rate = Linj * self.precalc.agn_factors_min
-            #heating_rate = Linj * self.agn_factors
-
-            return heating_rate - cooling_rate - dm_cooling_rate
 
         if fx >= 0.5:
             if s0<=1e-26:
@@ -597,7 +551,7 @@ class Cluster_werr():
         L_solution = 10**(log_L_solution)
 
         return L_solution#, L_var  # returns in units of 1e44 erg/s
-
+    
 
 
     def L500_numerical_conservative(self, mx, s0, cluster_age=10): # cluster age in Gyr

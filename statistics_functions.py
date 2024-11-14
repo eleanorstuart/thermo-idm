@@ -34,7 +34,7 @@ def chi_squared(model, data, variance, add_var=0): # take lists of model predict
     return np.sum((model - data)**2 / total_var)
 
 # log likelihood function for MCMC
-def log_lik(p0, obs, nfws, variances=None, fx=1.0, multfactor=1,agn_model='iqbal'):
+def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, multfactor=1,agn_model='iqbal'):
     log_s0 = p0[0]
     log_mx = p0[1]
 
@@ -65,7 +65,7 @@ def log_lik(p0, obs, nfws, variances=None, fx=1.0, multfactor=1,agn_model='iqbal
     #     raise ValueError("Invalid method. Expected 'analytic' or 'eddington'.")
     #variances_obs = np.array([nfw.L_err for nfw in nfws])
 
-    predicted_werr = np.array([nfw.L500_numerical(mx, s0, fx) for nfw in nfws])
+    predicted_werr = np.array([nfw.L500_numerical(mx, s0, fx, mpsi) for nfw in nfws])
     #predicted, variances_pred = zip(*predicted_werr)
     predicted = np.array(predicted_werr)
     #variances_pred = np.array(variances_pred)

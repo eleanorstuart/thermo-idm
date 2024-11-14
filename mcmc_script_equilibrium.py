@@ -21,11 +21,13 @@ def run_mcmc():
     parser.add_argument('nwalkers', type=int, help='number of walkers')
     parser.add_argument('nsteps', type=int, help='number of steps chains should run')
     parser.add_argument('fx', type=float, help='fraction of idm')
+    parser.add_argument('mpsi', type=float, help='mass of noninteracting particle')
     args = parser.parse_args()
     rmin = args.rmin
     nwalkers = args.nwalkers
     nsteps = args.nsteps
     fx = args.fx
+    mpsi = args.mpsi
 
     import pickle
     # Open the data file
@@ -56,7 +58,7 @@ def run_mcmc():
         sampler = emcee.EnsembleSampler(nwalkers,
                                 ndim,
                                 log_lik,
-                                args=[L_obs, nfws_subset, variances_obs, fx])
+                                args=[L_obs, nfws_subset, variances_obs, fx, mpsi])
         state = sampler.run_mcmc(initial, 1000, progress=True)
         sampler.reset()
 
@@ -78,10 +80,10 @@ def run_mcmc():
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
 
-    fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_fx{fx}_{formatted_datetime}.pdf', format='pdf', dpi=450)
+    fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
     import pickle
-    with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_{formatted_datetime}.pkl', 'wb') as f:
+    with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
 
     return

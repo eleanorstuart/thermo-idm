@@ -82,4 +82,4 @@ def plot_constraint(fig, mcmc_output, color, label, shaded=False, lines=True, fx
     if shaded:
         y2 = np.interp(x, np.log10(mchi_values), np.log10(s0_max/fx))
         fig.plot(np.log10(mchi_values), np.log10(s0_max/fx), color=color, linewidth=1.5, alpha=line_alpha)
-        fig.fill_between(x, y, y2, where=(y2 >= y), interpolate=True, color=color, alpha=0.3,)
+        fig.fill_between(x, y, y2, where=(y2 >= y), interpolate=True, color=color, alpha=0.4,)

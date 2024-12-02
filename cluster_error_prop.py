@@ -13,7 +13,7 @@ from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 from cluster_functions import c
 from cluster_energies import Energies
 from cluster_iqbal_heating import IqbalHeating
-from cluster_precalculations import PreCalculations
+#from cluster_precalculations import PreCalculations
 from cluster_thermalization import InteractionRate
 
 from astropy.cosmology import FlatLambdaCDM
@@ -57,7 +57,7 @@ class Cluster_werr():
         self.energies=Energies(self)
         self.heating=IqbalHeating(self)
         self.therm = InteractionRate(self)
-        self.precalc=PreCalculations(self)
+        #self.precalc=PreCalculations(self)
 
         # calculations to make L500_analytic faster
         rmin = rmin*self.R500 if rmin else 0.001*self.R500

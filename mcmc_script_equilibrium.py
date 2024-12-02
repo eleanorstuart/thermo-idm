@@ -10,7 +10,7 @@ import argparse
 from multiprocessing import Pool
 
 from statistics_functions import log_lik
-from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
+#from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
 
 

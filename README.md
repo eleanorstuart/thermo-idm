@@ -1,5 +1,5 @@
 # thermo-idm
-Notebooks: 
+## Notebooks: 
 - constraint_from_total_energy_avg.ipynb: Shows the calculation of the constraint on DM-proton interactions derived without assuming anything about additional heating/cooling mechanisms
 - cooling_comparison.ipynb: Calculates what fraction of the cooling in a cluster would come from DM cooling
 - generate_dataset.ipynb: Combines REFLEX and Planck data and saves the low z clusters
@@ -12,7 +12,7 @@ Notebooks:
 - reflex_subset_error_mcmc.ipynb: Error propagation for L500
 
 
-To use the environment.yml file: 
+## To use the environment.yml file: 
 
 `conda env create -f environment.yml` 
 

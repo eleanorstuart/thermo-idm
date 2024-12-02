@@ -1,5 +1,6 @@
 name: idm
 channels:
+  - anaconda
   - conda-forge
   - pypi
   - defaults
@@ -14,14 +15,14 @@ dependencies:
   - attrs=23.1.0=py311hecd8cb5_0
   - backcall=0.2.0=pyhd3eb1b0_0
   - beautifulsoup4=4.12.2=py311hecd8cb5_0
-  - blas=1.0=mkl
+  - blas=1.0=openblas
   - bleach=4.1.0=pyhd3eb1b0_0
   - bottleneck=1.3.5=py311hb9e55a9_0
   - brotli=1.0.9=hca72f7f_7
   - brotli-bin=1.0.9=hca72f7f_7
   - bzip2=1.0.8=h1de35cc_0
   - c-ares=1.19.1=h6c40b1e_0
-  - ca-certificates=2023.08.22=hecd8cb5_0
+  - ca-certificates=2024.7.2=hecd8cb5_0
   - cairo=1.16.0=h0ab9d94_1001
   - cffi=1.15.1=py311h6c40b1e_3
   - comm=0.1.2=py311hecd8cb5_0
@@ -57,6 +58,7 @@ dependencies:
   - ipython_genutils=0.2.0=pyhd3eb1b0_1
   - jedi=0.18.1=py311hecd8cb5_1
   - jinja2=3.1.2=py311hecd8cb5_0
+  - joblib=1.4.2=py311hecd8cb5_0
   - jpeg=9e=h6c40b1e_1
   - jsonschema=4.17.3=py311hecd8cb5_0
   - jupyter_client=7.4.9=py311hecd8cb5_0
@@ -81,6 +83,7 @@ dependencies:
   - libgfortran5=11.3.0=h9dfd629_28
   - libiconv=1.16=hca72f7f_2
   - libnghttp2=1.52.0=h9beae6a_1
+  - libopenblas=0.3.21=h54e7dc3_0
   - libpng=1.6.39=h6c40b1e_0
   - libsodium=1.0.18=h1de35cc_0
   - libssh2=1.10.0=h04015c4_2
@@ -99,8 +102,6 @@ dependencies:
   - mistune=0.8.4=py311h6c40b1e_1000
   - mkl=2023.1.0=h8e150cf_43559
   - mkl-service=2.4.0=py311h6c40b1e_1
-  - mkl_fft=1.3.8=py311h6c40b1e_0
-  - mkl_random=1.2.4=py311ha357a0b_0
   - mpc=1.1.0=h6ef4df4_1
   - mpfr=4.0.2=h9066e36_1
   - mpmath=1.3.0=py311hecd8cb5_0
@@ -113,9 +114,9 @@ dependencies:
   - nest-asyncio=1.5.6=py311hecd8cb5_0
   - notebook=6.5.4=py311hecd8cb5_1
   - notebook-shim=0.2.2=py311hecd8cb5_0
-  - numexpr=2.8.4=py311h728a8a3_1
-  - numpy=1.25.2=py311h728a8a3_0
-  - numpy-base=1.25.2=py311h53bf9ac_0
+  - numexpr=2.8.7=py311h91b6869_0
+  - numpy=1.24.3=py311hd0e4f0d_0
+  - numpy-base=1.24.3=py311h947b413_0
   - openjpeg=2.4.0=h66ea3da_0
   - openssl=3.1.4=hd75f5a5_0
   - packaging=23.1=py311hecd8cb5_0
@@ -149,7 +150,8 @@ dependencies:
   - pyyaml=6.0=py311h6c40b1e_1
   - pyzmq=23.2.0=py311hcec6c5f_0
   - readline=8.2=hca72f7f_0
-  - scipy=1.11.1=py311h224febf_0
+  - scikit-learn=1.3.0=py311hdb55bb0_1
+  - scipy=1.12.0=py311h7695dc5_0
   - seaborn=0.12.2=py311hecd8cb5_0
   - send2trash=1.8.0=pyhd3eb1b0_1
   - setuptools=68.0.0=py311hecd8cb5_0
@@ -162,6 +164,7 @@ dependencies:
   - tbb=2021.8.0=ha357a0b_0
   - terminado=0.17.1=py311hecd8cb5_0
   - texlive-core=20180414=ha09c46f_0
+  - threadpoolctl=3.5.0=py311h85bffb1_0
   - tinycss2=1.2.1=py311hecd8cb5_0
   - tk=8.6.12=h5d9f67b_0
   - tornado=6.3.2=py311h6c40b1e_0

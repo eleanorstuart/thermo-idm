@@ -6,7 +6,7 @@ To use the environment.yml file:
 
 `conda activate idm` 
 
-(currently out of date as of 09/13/2023 because the MCMC packages have not been added)
+(environment.yml updated 12/01/2024)
 
 Solution to `RuntumeError: Failed to process string with tex because latex could not be found`:
 

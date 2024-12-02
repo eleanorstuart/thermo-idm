@@ -8,8 +8,8 @@ import datetime
 import argparse
 from multiprocessing import Pool
 
-from statistics_functions import log_lik
-from load_data_and_var import load_data_and_var, generate_nfws_from_combined_dataset_werr
+from functions.statistics_functions import log_lik
+from functions.load_data_and_var import load_data_and_var, generate_nfws_from_combined_dataset_werr
 
 
 

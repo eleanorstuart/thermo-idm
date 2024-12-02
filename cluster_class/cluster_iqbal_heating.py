@@ -4,6 +4,8 @@ from astropy import units as u
 
 from asymmetric_uncertainty_mod import a_u
 
+from functions.statistics_functions import L500_from_T500, Linj_from_L500
+
 
 
 gamma_b=4./3.
@@ -56,3 +58,17 @@ class IqbalHeating:
         logMbh = a_u(10, 0.11, 0.11)+a_u(0.38, 0.03, 0.03)*np.log10(L500)#/(1e44*u.erg/u.s))
         Mbh = np.power(10, logMbh)#*u.Msun
         return 1e44 * (Mbh/(np.power(10, 9.5)))#*u.Msun))
+    
+    def calculate_eddington_luminosity(self):
+        # calculate eddington luminosity for a galaxy cluster as a float in units of erg/s
+        return (10**(47.5) * self.cluster.get_Mbh()/(10**(9.5)))
+    
+
+    def dheating_dT(self, rmin, rmax, rc, T500):
+        h = 1e-6 * T500
+        Linj_plus = Linj_from_L500(L500_from_T500(T500+h))
+        Linj_minus = Linj_from_L500(L500_from_T500(T500-h))
+        heating_rate_plus = self.cluster.total_heating_rate(rmin, rmax, rc, Linj=Linj_plus)
+        heating_rate_minus = self.cluster.total_heating_rate(rmin, rmax, rc, Linj=Linj_minus)
+        dheating_dT = (heating_rate_plus - heating_rate_minus) / (2 * h)
+        return dheating_dT

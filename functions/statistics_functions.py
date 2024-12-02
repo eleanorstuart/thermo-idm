@@ -57,13 +57,6 @@ def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, multfactor=1,agn_m
         return -np.inf
     #constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 
-    # if agn_model == 'iqbal':
-    #     predicted_werr = np.array([nfw.L500_analytic(mx, constant, mult_agn=multfactor) for nfw in nfws])
-    # elif agn_model == 'eddington':
-    #     predicted_werr = np.array([nfw.L500_analytic_eddington(mx, constant, frac_L=multfactor) for nfw in nfws])
-    # else:
-    #     raise ValueError("Invalid method. Expected 'analytic' or 'eddington'.")
-    #variances_obs = np.array([nfw.L_err for nfw in nfws])
 
     predicted_werr = np.array([nfw.L500_numerical(mx, s0, fx, mpsi) for nfw in nfws])
     #predicted, variances_pred = zip(*predicted_werr)
@@ -77,33 +70,6 @@ def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, multfactor=1,agn_m
     X2 = chi_squared(predicted, obs, variances, add_var=predicted)
     return -X2/2
 
-def log_lik1(p0, obs, nfws, variances, multagn=1, mx=0.01):
-    log_s0 = p0[0]
-    #log_mx = p0[1]
-
-    # prior
-    #if log_s0>0 or log_s0<-40:
-    #    return -np.inf
-    # DM particle mass is limited to being less than a proton mass
-    #if log_mx<-4 or log_mx>log_mp: #10**log_mx>const.m_p.to(u.GeV, equivalencies=u.mass_energy()).value:
-    #    return -np.inf
-
-    if not (-40 <= log_s0 <= 0): #or not (-4 <= log_mx <= log_mp):
-        return -np.inf
-
-    # calculate model predicted L500
-    #s0 = np.power(10., float(log_s0))
-    #mx = np.power(10., float(log_mx))
-    s0 = 10**log_s0
-    mx = mx
-    constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
-
-    predicted_werr = np.array([nfw.L500_analytic(mx, constant, mult_agn=multagn) for nfw in nfws])
-    variances_pred = np.array([max(p.plus, p.minus) for p in predicted_werr])
-    predicted = np.array([p.value for p in predicted_werr])
-
-    X2 = chi_squared(predicted, obs, variances, add_var=variances_pred)
-    return -X2/2
 
 
 

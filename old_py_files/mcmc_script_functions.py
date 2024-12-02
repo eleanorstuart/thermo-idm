@@ -3,7 +3,7 @@ import corner
 import datetime
 import pickle
 
-from load_data_and_var import load_data_and_var, generate_nfws_from_combined_dataset_werr
+from functions.load_data_and_var import load_data_and_var, generate_nfws_from_combined_dataset_werr
 
 
 def create_cluster_objects(rmin):

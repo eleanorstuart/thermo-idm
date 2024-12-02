@@ -9,7 +9,7 @@ import datetime
 import argparse
 from multiprocessing import Pool
 
-from statistics_functions import log_lik
+from functions.statistics_functions import log_lik
 #from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
 
@@ -29,7 +29,6 @@ def run_mcmc():
     fx = args.fx
     mpsi = args.mpsi if args.mpsi else None
 
-    import pickle
     # Open the data file
     with open('data/equilibrium_clusters.pkl', 'rb') as file:
         # Load the data into nfws_subset variable

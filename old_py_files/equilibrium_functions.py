@@ -3,7 +3,7 @@ from astropy import units as u
 from astropy import constants as const
 #from scipy.optimize import brentq
 #from statistics_functions import chi_squared
-from cluster_functions import c
+from cluster_class.cluster_functions import c
 
 def radiative_cooling_rate(T_b, measurements, n_e):
     prefactors=6.8*1e-42 *u.erg*u.cm**3

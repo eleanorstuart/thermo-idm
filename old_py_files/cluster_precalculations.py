@@ -6,7 +6,7 @@ from astropy import constants as const
 from scipy.optimize import brentq, root_scalar
 
 from asymmetric_uncertainty_mod import a_u
-from cluster_functions import c
+from cluster_class.cluster_functions import c
 
 
 # model consts

@@ -4,8 +4,8 @@ from astropy import units as u
 from astropy import constants as const
 from dataclasses import dataclass
 
-from plotting import savefig, paper_plot
-from cluster_functions import * 
+from functions.plotting import savefig, paper_plot
+from cluster_class.cluster_functions import * 
 from old_py_files.iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
 from cluster_measurements import ClusterMeasurements

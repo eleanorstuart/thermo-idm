@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from astropy import units as u
 from astropy import constants as const
-from cluster_functions import *
+from cluster_class.cluster_functions import *
 
 
 @dataclass

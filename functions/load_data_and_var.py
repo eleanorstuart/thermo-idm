@@ -4,7 +4,7 @@ from astropy import units as u
 from astropy.table import QTable
 
 #from nfw_profile_heating import NFWProfile
-from cluster_error_prop import Cluster_werr
+from cluster_class.cluster_error_prop import Cluster_werr
 
 def load_data_and_var():
     # import datasets

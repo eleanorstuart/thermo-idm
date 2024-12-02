@@ -10,11 +10,11 @@ from scipy.optimize import brentq
 
 from asymmetric_uncertainty_mod import a_u, pos_errors, neg_errors
 
-from cluster_functions import c
-from cluster_energies import Energies
-from cluster_iqbal_heating import IqbalHeating
+from cluster_class.cluster_functions import c
+from cluster_class.cluster_energies import Energies
+from cluster_class.cluster_iqbal_heating import IqbalHeating
 #from cluster_precalculations import PreCalculations
-from cluster_thermalization import InteractionRate
+from cluster_class.cluster_thermalization import InteractionRate
 
 from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(70, 0.3)
@@ -612,30 +612,6 @@ class Cluster_werr():
         return logLs, eqs
 
 
-        if s0<=1e-26:
-            lower = -5
-            upper = 10
-        elif s0>1e-26 and s0<=10**-25.25:
-            lower = -3
-            upper = 20
-        elif s0>10**-25.25 and s0<=1e-24:
-            lower = -1
-            upper = 40
-        elif s0>1e-24:
-            lower = 0
-            upper = 50
-
-        try:
-            log_L_solution = brentq(equation, lower, upper)
-        except ValueError as e:
-                print(f"Error finding log_L_solution: {e}")
-                print('s0:', s0)
-                print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
-                raise
-
-        L_solution = 10**(log_L_solution)
-
-        return L_solution#, L_var  # returns in units of 1e44 erg/s
 
 
 
@@ -685,32 +661,7 @@ class Cluster_werr():
         logLs = np.linspace(-20, 20, 100)
         eqs = [equation(logL) for logL in logLs]
         return logLs, eqs
-
-
-        if s0<=1e-26:
-            lower = -10
-            upper = 20
-        elif s0>1e-26 and s0<=10**-25.25:
-            lower = -3
-            upper = 20
-        elif s0>10**-25.25 and s0<=1e-24:
-            lower = -1
-            upper = 40
-        elif s0>1e-24:
-            lower = 0
-            upper = 50
-
-        try:
-            log_L_solution = brentq(equation, lower, upper)
-        except ValueError as e:
-                print(f"Error finding log_L_solution: {e}")
-                print('s0:', s0)
-                print(f"equation({lower}): {equation(lower)}, equation({upper}): {equation(upper)}")
-                raise
-
-        L_solution = 10**(log_L_solution)
-
-        return L_solution#, L_var  # returns in units of 1e44 erg/s        
+    
    
 
 def Linj_from_L500(logL500, bound=None):

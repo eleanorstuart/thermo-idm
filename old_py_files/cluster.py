@@ -9,7 +9,7 @@ from cluster_functions import *
 from old_py_files.iqbal_agn_heating_functions import vol_heating_rate
 from cluster_timescales import ClusterTimescales
 from cluster_measurements import ClusterMeasurements
-from nfw_profile_heating import NFWProfile
+from old_py_files.nfw_profile_heating import NFWProfile
 
 
 

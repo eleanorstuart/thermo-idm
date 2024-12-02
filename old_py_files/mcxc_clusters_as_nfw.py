@@ -4,7 +4,7 @@ from astropy.table import QTable
 from astropy import units as u
 import pickle
 
-from nfw_profile_heating import NFWProfile
+from old_py_files.nfw_profile_heating import NFWProfile
 
 
 def load_clusters(nrows=None, dataset='REFLEX'):

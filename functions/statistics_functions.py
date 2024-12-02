@@ -1,13 +1,13 @@
 import numpy as np
 from astropy import constants as const
 from astropy import units as u
-from scipy.optimize import brentq
+#from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import pickle
 
 # from equilibrium_functions import equil
-from cluster_functions import c
-from asymmetric_uncertainty_mod import a_u
+from cluster_class.cluster_functions import c
+#from asymmetric_uncertainty_mod import a_u
 
 mp_GeV = (const.m_p).to(u.GeV).value
 log_mp = np.log10(mp_GeV)

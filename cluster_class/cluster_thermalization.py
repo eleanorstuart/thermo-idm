@@ -22,9 +22,9 @@ class InteractionRate:
         rmin = 0.001*self.cluster.R500
         rmax = self.cluster.R500
         avg_number_density = self.avg_over_volume(rmin, rmax, lambda r: self.dm_number_density(r, mchi))/((u.Mpc.to(u.cm))**3)
-        print(avg_number_density)
+        #print(avg_number_density)
         avg_velocity = self.avg_over_volume(rmin, rmax, self.velocity)
-        print(avg_velocity)
+        #print(avg_velocity)
 
 
         interaction_rate = avg_number_density * avg_velocity * sigma0

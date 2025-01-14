@@ -4,7 +4,7 @@ from astropy import units as u
 
 from asymmetric_uncertainty_mod import a_u
 
-from functions.statistics_functions import L500_from_T500, Linj_from_L500
+from cluster_class.cluster_functions import L500_from_T500, Linj_from_L500
 
 
 

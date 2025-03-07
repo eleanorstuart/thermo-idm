@@ -33,7 +33,7 @@ def run_mcmc():
     mpsi = args.mpsi if args.mpsi else None
 
     # Open the data file
-    with open('data/virialized_nfws_sp.pkl', 'rb') as file:
+    with open('../data/virialized_nfws_sp.pkl', 'rb') as file:
         # Load the data into nfws_subset variable
         nfws_subset = pickle.load(file)
 

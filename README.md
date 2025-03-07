@@ -8,7 +8,6 @@
 - load_mcmc_output-equil.ipynb: MCMC output from 49 cluster set
 - load_mcmc_output.ipynb: MCMC output from 111 cluster set
 - load_mcmc_output_fidm.ipynb: Generates figure 2, output for 2-component DM
-- load_mcmc_output_fidm_unequal_masses.ipynb: Output for 2-component DM with a lower-mass noninteracting species
 - reflex_subset_error_mcmc.ipynb: Error propagation for L500
 
 

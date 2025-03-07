@@ -23,13 +23,13 @@ def run_mcmc():
     parser.add_argument('rmin', type=float, help='lower bound for integration when calculating heating and cooling rates')
     parser.add_argument('nwalkers', type=int, help='number of walkers')
     parser.add_argument('nsteps', type=int, help='number of steps chains should run')
-    parser.add_argument('fx', type=float, help='fraction of idm')
-    parser.add_argument('mpsi', type=float, help='mass of noninteracting particle')
+    parser.add_argument('fx', type=float,  nargs='?', default=1.0, help='fraction of idm')
+    parser.add_argument('mpsi', type=float, nargs='?', default=None, help='mass of noninteracting particle')
     args = parser.parse_args()
     rmin = args.rmin
     nwalkers = args.nwalkers
     nsteps = args.nsteps
-    fx = args.fx
+    fx = args.fx if args.fx else 1.0
     mpsi = args.mpsi if args.mpsi else None
 
     # Open the data file

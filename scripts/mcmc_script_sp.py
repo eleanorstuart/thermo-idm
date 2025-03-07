@@ -9,6 +9,9 @@ import datetime
 import argparse
 from multiprocessing import Pool
 
+import sys
+import os
+sys.path.append('..')
 from functions.statistics_functions import log_lik
 #from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
@@ -81,7 +84,6 @@ def run_mcmc():
 
     fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
-    import pickle
     with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
 

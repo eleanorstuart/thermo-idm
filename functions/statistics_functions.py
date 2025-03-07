@@ -16,7 +16,7 @@ GeV_to_erg = (u.GeV).to(u.erg)
 
 
 # Unpickle the dictionary from the file
-with open('data/prior_boundary_points.pkl', 'rb') as f:
+with open('../data/prior_boundary_points.pkl', 'rb') as f:
     data = pickle.load(f)
 
 # Unpack the dictionary into variables

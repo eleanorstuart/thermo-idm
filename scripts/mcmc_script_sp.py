@@ -82,9 +82,9 @@ def run_mcmc():
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
 
-    fig.savefig(f'plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf', format='pdf', dpi=450)
+    fig.savefig(f'../plots/mcmc_corner_plot_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf', format='pdf', dpi=450)
 
-    with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
+    with open(f'../pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
 
     return

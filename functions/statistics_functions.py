@@ -9,6 +9,10 @@ import pickle
 from cluster_class.cluster_functions import c
 #from asymmetric_uncertainty_mod import a_u
 
+import sys
+import os
+sys.path.append('..')
+
 mp_GeV = (const.m_p).to(u.GeV).value
 log_mp = np.log10(mp_GeV)
 c0 = c(0) * (const.c.to(u.cm / u.s)).value
@@ -16,7 +20,7 @@ GeV_to_erg = (u.GeV).to(u.erg)
 
 
 # Unpickle the dictionary from the file
-with open('../data/prior_boundary_points.pkl', 'rb') as f:
+with open('data/prior_boundary_points.pkl', 'rb') as f:
     data = pickle.load(f)
 
 # Unpack the dictionary into variables

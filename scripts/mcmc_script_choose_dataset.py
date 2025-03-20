@@ -26,6 +26,7 @@ def run_mcmc():
     parser.add_argument('dataset', type=str, nargs='?', default=None, help='path to dataset')
     parser.add_argument('fx', type=float,  nargs='?', default=1.0, help='fraction of idm')
     parser.add_argument('mpsi', type=float, nargs='?', default=None, help='mass of noninteracting particle')
+    parser.add_argument('prior', type=bool, nargs='?', default=False, help="set True to include interaction rate prior")
 
     args = parser.parse_args()
     rmin = args.rmin
@@ -34,6 +35,7 @@ def run_mcmc():
     fx = args.fx if args.fx else 1.0
     mpsi = args.mpsi if args.mpsi else None
     dataset = args.dataset if args.dataset else '../data/virialized_nfws_sp.pkl'
+    prior = args.prior if args.prior else False
 
     # Open the data file
     with open(dataset, 'rb') as file:
@@ -63,7 +65,7 @@ def run_mcmc():
         sampler = emcee.EnsembleSampler(nwalkers,
                                 ndim,
                                 log_lik,
-                                args=[L_obs, nfws_subset, variances_obs, fx, mpsi])
+                                args=[L_obs, nfws_subset, variances_obs, fx, mpsi, prior])
         state = sampler.run_mcmc(initial, 1000, progress=True)
         sampler.reset()
 

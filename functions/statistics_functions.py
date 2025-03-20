@@ -20,7 +20,7 @@ GeV_to_erg = (u.GeV).to(u.erg)
 
 
 # Unpickle the dictionary from the file
-with open('data/prior_boundary_points.pkl', 'rb') as f:
+with open('../data/prior_boundary_points.pkl', 'rb') as f:
     data = pickle.load(f)
 
 # Unpack the dictionary into variables
@@ -38,7 +38,7 @@ def chi_squared(model, data, variance, add_var=0): # take lists of model predict
     return np.sum((model - data)**2 / total_var)
 
 # log likelihood function for MCMC
-def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, multfactor=1,agn_model='iqbal'):
+def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, prior=True, multfactor=1,agn_model='iqbal'):
     log_s0 = p0[0]
     log_mx = p0[1]
 
@@ -56,9 +56,10 @@ def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, multfactor=1,agn_m
     mx = 10**log_mx
 
     # prior based on interaction rate limit
-    if s0>boundary_func(mx)/fx:
+    if prior:    
+        if s0>boundary_func(mx)/fx:
         #print('outside prior', s0, mx)
-        return -np.inf
+            return -np.inf
     #constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 
 

@@ -15,7 +15,28 @@ sys.path.append('..')
 from functions.statistics_functions import log_lik
 #from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
+import matplotlib.pyplot as plt
 
+def convergence_diagnostics(sampler, rmin, nwalkers, nsteps, fx, mpsi, formatted_datetime):
+        # Diagnostics
+    chains = sampler.get_chain()  # shape: (nsteps, nwalkers, ndim)
+
+    import arviz as az
+    idata = az.from_emcee(sampler)
+
+    summary = az.summary(idata, round_to=2)
+    print(summary)
+
+    # Save diagnostics
+    summary.to_csv(f'../pickled/mcmc_diagnostics_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.csv')
+
+    # Optional plots
+    az.plot_trace(idata)
+    plt.savefig(f'../plots/mcmc_trace_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf')
+
+    az.plot_autocorr(idata)
+    plt.savefig(f'../plots/mcmc_autocorr_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf')
+    return
 
 
 def run_mcmc():
@@ -91,6 +112,8 @@ def run_mcmc():
 
     with open(f'../pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
+
+    convergence_diagnostics(sampler, rmin, nwalkers, nsteps, fx, mpsi, formatted_datetime)
 
     return
 

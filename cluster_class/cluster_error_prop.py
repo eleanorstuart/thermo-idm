@@ -473,10 +473,10 @@ class Cluster_werr():
             elif s0>10**-25.25 and s0<=1e-24:
                 lower = -1
                 upper = 40
-            elif s0>1e-24 and s0<=10**23.25:
+            elif s0>1e-24 and s0<=10**-23.25:
                 lower = 0
                 upper = 50
-            elif s0>10**23.25:
+            elif s0>10**-23.25:
                 lower = 2
                 upper = 50
         elif fx == 0.1:

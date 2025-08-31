@@ -13,6 +13,7 @@ from functions.statistics_functions import log_lik
 #from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
 
+from mcmc_script_choose_dataset import convergence_diagnostics
 
 
 def run_mcmc():
@@ -84,6 +85,8 @@ def run_mcmc():
     import pickle
     with open(f'pickled/mcmc_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pkl', 'wb') as f:
         pickle.dump(flat_samples, f)
+
+    convergence_diagnostics(sampler, rmin, nwalkers, nsteps, fx, mpsi, formatted_datetime)
 
     return
 

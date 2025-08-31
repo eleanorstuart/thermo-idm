@@ -234,10 +234,27 @@ class Cluster_werr():
 
     def plasma_entropy(self, r):
         adiabatic_idx = 5. / 3.
-        baryon_number_density = (2 * self.n_e(r)).to(u.m ** (-3))
+        baryon_number_density = (2 * self.n_e(r))#.to(u.m ** (-3)).value
+        #return (const.k_B * self.T_g(r.to(u.Mpc).value).to(u.K, equivalencies=u.temperature_energy())).to(u.GeV) / baryon_number_density ** (adiabatic_idx - 1)
+        return (self.T_g(r)) / baryon_number_density ** (adiabatic_idx - 1)
+
+
+    def total_gaspari_agn_heating_rate(self):
+        adiabatic_idx = 5. / 3.
+        T500 = self.T500
+        #ne500 = self.n_e([self.R500.value]) 
+        norm = 1./4.
+        mu = 1
+        GM_term = ((const.G/const.c**2)* self.get_Mbh()*u.Msun).to(u.Mpc).value
+        #G = (const.G/const.c**2).to(u.Mpc / u.Msun).value
         return (
-            const.k_B * self.T_g(r.to(u.Mpc).value).to(u.K, equivalencies=u.temperature_energy())
-        ).to(u.GeV) / baryon_number_density ** (adiabatic_idx - 1)    
+            norm * 4* np.pi
+            *(GM_term)**2 # Mpc**2
+            *(mu*mp_GeV)**(5./2) # GeV ** (5/2)
+            /(adiabatic_idx**(3./2))
+            *self.plasma_entropy(self.R500)**(-3./2) # GeV **-3/2 * /Mpc**3
+            * GeV_to_erg / (const.c).to(u.Mpc/u.s).value)#.to(u.erg/u.s)
+    
 
     # radiative cooling rate
     def vol_cooling_rate(self, r, match_gaspari=True):
@@ -456,8 +473,11 @@ class Cluster_werr():
             elif s0>10**-25.25 and s0<=1e-24:
                 lower = -1
                 upper = 40
-            elif s0>1e-24:
+            elif s0>1e-24 and s0<=10**23.25:
                 lower = 0
+                upper = 50
+            elif s0>10**23.25:
+                lower = 2
                 upper = 50
         elif fx == 0.1:
             if s0<=1e-26:

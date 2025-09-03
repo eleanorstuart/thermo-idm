@@ -24,7 +24,7 @@ def convergence_diagnostics(sampler, rmin, nwalkers, nsteps, fx, mpsi, formatted
     import arviz as az
     idata = az.from_emcee(sampler)
 
-    summary = az.summary(idata, round_to=2)
+    summary = az.summary(idata, round_to=4)
     print(summary)
 
     # Save diagnostics

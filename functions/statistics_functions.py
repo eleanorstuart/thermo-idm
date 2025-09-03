@@ -58,7 +58,7 @@ def log_lik(p0, obs, nfws, variances=None, fx=1.0, mpsi=None, prior=True, multfa
     # prior based on interaction rate limit
     if prior:    
         if s0>boundary_func(mx)/fx:
-        #print('outside prior', s0, mx)
+            print('outside prior', s0, mx)
             return -np.inf
     #constant = (3*c0*s0/(((mx + mp_GeV) ** 2)) * GeV_to_erg)
 

@@ -58,10 +58,13 @@ def run_mcmc():
     dataset = args.dataset if args.dataset else '../data/virialized_nfws_sp.pkl'
     prior = args.prior if args.prior else False
 
+    print(args)
+
     # Open the data file
     with open(dataset, 'rb') as file:
         # Load the data into nfws_subset variable
         nfws_subset = pickle.load(file)
+    print(f'loaded {len(nfws_subset)} clusters from {dataset}')
 
     L_obs = [n.L500 for n in nfws_subset]
     variances_obs = np.array([n.L_err for n in nfws_subset])

@@ -30,10 +30,14 @@ def run_mcmc():
     fx = args.fx
     mpsi = args.mpsi if args.mpsi else None
 
+    print(args)
+
+    data_file = 'data/equilibrium_clusters.pkl'
     # Open the data file
-    with open('data/equilibrium_clusters.pkl', 'rb') as file:
+    with open(data_file, 'rb') as file:
         # Load the data into nfws_subset variable
         nfws_subset = pickle.load(file)
+    print(f'loaded {len(nfws_subset)} clusters from {data_file}')
 
     L_obs = [n.L500 for n in nfws_subset]
     variances_obs = np.array([n.L_err for n in nfws_subset])

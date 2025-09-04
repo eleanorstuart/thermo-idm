@@ -9,11 +9,15 @@ import datetime
 import argparse
 from multiprocessing import Pool
 
+from mcmc_script_choose_dataset import convergence_diagnostics
+import sys
+import os
+sys.path.append('..')
 from functions.statistics_functions import log_lik
 #from mcmc_script_functions import create_cluster_objects, create_initial_state, plot_and_save_results
 import pickle
 
-from mcmc_script_choose_dataset import convergence_diagnostics
+
 
 
 def run_mcmc():

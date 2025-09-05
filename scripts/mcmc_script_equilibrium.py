@@ -9,7 +9,7 @@ import datetime
 import argparse
 from multiprocessing import Pool
 
-from mcmc_script_choose_dataset import convergence_diagnostics
+#from mcmc_script_choose_dataset import convergence_diagnostics
 import sys
 import os
 sys.path.append('..')
@@ -18,6 +18,26 @@ from functions.statistics_functions import log_lik
 import pickle
 
 
+def convergence_diagnostics(sampler, rmin, nwalkers, nsteps, fx, mpsi, formatted_datetime):
+        # Diagnostics
+    chains = sampler.get_chain()  # shape: (nsteps, nwalkers, ndim)
+
+    import arviz as az
+    idata = az.from_emcee(sampler)
+
+    summary = az.summary(idata, round_to=4)
+    print(summary)
+
+    # Save diagnostics
+    summary.to_csv(f'../pickled/mcmc_diagnostics_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.csv')
+
+    # Optional plots
+    az.plot_trace(idata)
+    plt.savefig(f'../plots/mcmc_trace_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf')
+
+    az.plot_autocorr(idata)
+    plt.savefig(f'../plots/mcmc_autocorr_{rmin}_{nwalkers}_{nsteps}_fx{fx}_mpsi{mpsi}_{formatted_datetime}.pdf')
+    return
 
 
 def run_mcmc():
